@@ -1,6 +1,20 @@
 (function () {
   'use strict';
 
+  // ── Theme ─────────────────────────────────────────────────────────────────
+  (function () {
+    var t = localStorage.getItem('theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+
+  function themeIcon() {
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    return dark
+      ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="19.07" y2="19.07"/><line x1="4.93" y1="19.07" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="19.07" y2="4.93"/></svg>'
+      : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  }
+
   // ── State ─────────────────────────────────────────────────────────────────
   var config          = null;   // full config object from /api/config
   var availableFiles  = {};     // { "ClientName": ["Assets/ClientName/file.png", ...] }
@@ -55,6 +69,22 @@
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
+  // Theme toggle in admin bar
+  (function () {
+    var btn = document.createElement('button');
+    btn.className = 'btn btn-ghost';
+    btn.style.cssText = 'padding:5px 8px;display:inline-flex;align-items:center;';
+    btn.setAttribute('aria-label', 'Toggle dark mode');
+    btn.innerHTML = themeIcon();
+    document.querySelector('.admin-actions').prepend(btn);
+    btn.addEventListener('click', function () {
+      var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      btn.innerHTML = themeIcon();
+    });
+  })();
+
   Promise.all([
     fetch('/api/config').then(function (r) { return r.json(); }),
     fetch('/api/assets').then(function (r) { return r.json(); }),
@@ -102,14 +132,43 @@
     config.clients.forEach(function (c) {
       html += '<button class="tab-btn' + (view === c.id ? ' active' : '') + '" data-view="' + escAttr(c.id) + '">' + esc(c.name) + '</button>';
     });
+    html += '<button class="tab-btn tab-new" id="btn-new-client" title="New client">+</button>';
     $tabs.innerHTML = html;
+
     $tabs.addEventListener('click', function (e) {
       var btn = e.target.closest('.tab-btn');
-      if (!btn) return;
+      if (!btn || !btn.dataset.view) return;
       view = btn.dataset.view;
       selectedIndex = -1;
       renderAll();
     });
+
+    var newBtn = document.getElementById('btn-new-client');
+    if (newBtn) {
+      newBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var name = prompt('New client name:');
+        if (!name || !name.trim()) return;
+        var category = prompt('Category (e.g. Branding, Social Media):') || '';
+        fetch('/api/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name.trim(), category: category.trim() }),
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) { alert(data.error); return; }
+          config.clients.push(data.client);
+          return fetch('/api/assets').then(function (r) { return r.json(); }).then(function (files) {
+            availableFiles = files;
+            view = data.id;
+            selectedIndex = -1;
+            renderAll();
+          });
+        })
+        .catch(function (e) { alert('Error: ' + e.message); });
+      });
+    }
   }
 
   // ── Sidebar ───────────────────────────────────────────────────────────────
@@ -170,8 +229,16 @@
     if (!client) return;
     var g = resolvedG(client);
 
-    // ── Grid Settings ──
+    // ── Client Info ──
     var html = '<div class="sidebar-section">';
+    html += '<p class="section-title">Client</p>';
+    html += '<div class="ctrl-row"><span class="ctrl-label">Name</span><input type="text" class="ctrl-text" id="edit-client-name" value="' + escAttr(client.name) + '"></div>';
+    html += '<div class="ctrl-row"><span class="ctrl-label">Category</span><input type="text" class="ctrl-text" id="edit-client-category" value="' + escAttr(client.category || '') + '"></div>';
+    html += '<button class="btn-remove" id="btn-delete-client">Delete Client</button>';
+    html += '</div>';
+
+    // ── Grid Settings ──
+    html += '<div class="sidebar-section">';
     html += '<p class="section-title">Grid Settings</p>';
     html += '<div class="bp-tabs">';
     ['desktop','tablet','mobile'].forEach(function(bp) {
@@ -203,14 +270,16 @@
 
     // ── Available files to add ──
     var folder  = clientFolder(client);
-    var allInFolder = folder ? (availableFiles[folder.replace('Assets/', '')] || []) : [];
+    var folderKey = folder ? folder.replace('Assets/', '') : client.name;
+    var allInFolder = availableFiles[folderKey] || [];
     var usedFiles   = client.assets.map(function (a) { return a.file; });
     var unused      = allInFolder.filter(function (f) { return usedFiles.indexOf(f) === -1; });
 
     html += '<div class="sidebar-section">';
     html += '<p class="section-title">Add to Grid</p>';
+    html += '<label class="btn-upload-label" id="upload-label"><input type="file" id="upload-input" multiple accept="image/*,video/*,.gif,.webp,.webm,.mp4,.mov" style="display:none"><span id="upload-label-text">↑ Upload Files</span></label>';
     if (unused.length === 0) {
-      html += '<p class="avail-empty">All files in this folder are already in the grid.</p>';
+      html += '<p class="avail-empty">All files in this folder are in the grid.</p>';
     } else {
       html += '<div class="available-list">';
       unused.forEach(function (file) {
@@ -246,6 +315,66 @@
   }
 
   function bindSidebarEvents(client, g) {
+    // Edit name
+    var nameInput = document.getElementById('edit-client-name');
+    if (nameInput) {
+      nameInput.addEventListener('input', function () {
+        client.name = this.value;
+        markDirty();
+        renderTabs();
+      });
+    }
+
+    // Edit category
+    var catInput = document.getElementById('edit-client-category');
+    if (catInput) {
+      catInput.addEventListener('input', function () {
+        client.category = this.value;
+        markDirty();
+      });
+    }
+
+    // Delete client
+    var deleteClientBtn = document.getElementById('btn-delete-client');
+    if (deleteClientBtn) {
+      deleteClientBtn.addEventListener('click', function () {
+        if (!confirm('Remove "' + client.name + '" from portfolio? (Assets folder is kept)')) return;
+        var idx = config.clients.indexOf(client);
+        if (idx >= 0) config.clients.splice(idx, 1);
+        view = 'home';
+        selectedIndex = -1;
+        fetch('/api/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config),
+        }).catch(function () {});
+        dirty = false;
+        renderAll();
+      });
+    }
+
+    // Upload files
+    var uploadInput = document.getElementById('upload-input');
+    if (uploadInput) {
+      uploadInput.addEventListener('change', function () {
+        if (!this.files.length) return;
+        var labelText = document.getElementById('upload-label-text');
+        if (labelText) labelText.textContent = 'Uploading…';
+        var formData = new FormData();
+        Array.prototype.forEach.call(this.files, function (f) { formData.append('files', f); });
+        fetch('/api/upload/' + client.id, { method: 'POST', body: formData })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) { alert('Upload failed: ' + data.error); renderSidebar(); return; }
+          return fetch('/api/assets').then(function (r) { return r.json(); }).then(function (files) {
+            availableFiles = files;
+            renderSidebar();
+          });
+        })
+        .catch(function (e) { alert('Upload error: ' + e.message); renderSidebar(); });
+      });
+    }
+
     // Grid sliders + number inputs — keep them in sync
     $sidebar.querySelectorAll('[data-key]').forEach(function (el) {
       el.addEventListener('input', function () {
@@ -414,7 +543,6 @@
                 : '';
     var vpClose = vpOpen ? '</div>' : '';
 
-    // Darken outer canvas when simulating a device
     document.getElementById('preview').style.background = vpOpen ? '#C8C8C8' : '';
 
     $preview.innerHTML =
@@ -436,7 +564,6 @@
       if (!tile) return;
       var idx = parseInt(tile.dataset.index, 10);
 
-      // Wider / narrower buttons
       if (e.target.closest('.btn-wider')) {
         var asset = client.assets[idx];
         var cur   = asset.cols || 1;

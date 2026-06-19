@@ -430,6 +430,65 @@ main#app { flex: 1; }
 }
 .footer-email a:hover { color: var(--text); }
 
+/* ─── Theme toggle ───────────────────────────────────────────── */
+.theme-toggle {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover { color: var(--text); background: rgba(0,0,0,0.05); }
+.theme-toggle svg   { width: 18px; height: 18px; display: block; }
+
+/* ─── Dark Mode ──────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:         #121212;
+  --text:       #F0F0F0;
+  --text-muted: #909090;
+  --border:     #2D2D2D;
+}
+
+[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+
+[data-theme="dark"] .nav {
+  background: rgba(18,18,18,0.92);
+  border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .theme-toggle:hover { background: rgba(255,255,255,0.07); }
+
+[data-theme="dark"] .bento-item.client-tile {
+  background: #1E1E1E;
+  border-color: var(--border);
+}
+[data-theme="dark"] .bento-item.client-tile:hover {
+  border-color: #555;
+  box-shadow: 0 8px 36px rgba(0,0,0,0.5);
+}
+
+[data-theme="dark"] .bento-item {
+  background: #222;
+}
+
+[data-theme="dark"] .footer {
+  border-top-color: var(--border);
+}
+
+[data-theme="dark"] .lb-nav {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+}
+[data-theme="dark"] .lb-nav:hover {
+  background: rgba(255,255,255,0.12);
+}
+
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 1024px) {
   :root { --row-h: 240px; }

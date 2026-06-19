@@ -402,6 +402,83 @@ body {
 .bento-item[data-size="featured"] { grid-column: span 3; grid-row: span 2; }
 .bento-item[data-size="hero"]     { grid-column: span 6; grid-row: span 2; }
 
+/* ─── Text input (client name / category) ────────────────────── */
+.ctrl-text {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text);
+  background: #FAFAFA;
+  outline: none;
+}
+.ctrl-text:focus { border-color: var(--accent); background: #fff; }
+
+/* ─── Upload button ──────────────────────────────────────────── */
+.btn-upload-label {
+  display: block;
+  width: 100%;
+  padding: 7px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 10px;
+  transition: all 0.15s;
+}
+.btn-upload-label:hover { color: var(--text); border-color: #999; }
+
+/* ─── "+" new client tab ─────────────────────────────────────── */
+.tab-new {
+  opacity: 0.6;
+  font-size: 16px !important;
+  padding: 2px 10px !important;
+}
+.tab-new:hover { opacity: 1; }
+
+/* ─── Dark Mode ──────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:     #1A1A1A;
+  --panel:  #242424;
+  --border: #333333;
+  --text:   #EEEEEE;
+  --muted:  #888888;
+}
+
+[data-theme="dark"] .ctrl-num,
+[data-theme="dark"] .ctrl-text {
+  background: #2A2A2A;
+  color: var(--text);
+  border-color: var(--border);
+}
+[data-theme="dark"] .ctrl-num:focus,
+[data-theme="dark"] .ctrl-text:focus {
+  background: #333;
+  border-color: #888;
+}
+
+[data-theme="dark"] .ctrl-slider { background: #444; }
+
+[data-theme="dark"] .selected-thumb { background: #2A2A2A; }
+
+[data-theme="dark"] .home-preview .bento-item {
+  background: #2A2A2A;
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .preview-tile { background: #2A2A2A; }
+
+[data-theme="dark"] .avail-item { background: #333; }
+
+[data-theme="dark"] .size-btn { background: #2A2A2A !important; color: #ccc !important; border-color: #444 !important; }
+[data-theme="dark"] .size-btn.active { background: #fff !important; color: #111 !important; border-color: #fff !important; }
+
 /* Section header in preview */
 .preview-section-label {
   font-size: 10px;
