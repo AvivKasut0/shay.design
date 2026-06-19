@@ -262,7 +262,6 @@ main#app { flex: 1; }
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  align-self: start;
 }
 
 .asset-tile img,
@@ -277,27 +276,10 @@ main#app { flex: 1; }
 .asset-tile[data-rows] {
   align-self: stretch;
 }
-.asset-tile[data-rows] img,
-.asset-tile[data-rows] video {
-  height: 100%;
-  object-fit: cover;
-}
 
 .asset-tile:hover img,
 .asset-tile:hover video {
-  transform: scale(1.03);
-}
-
-.asset-tile .tile-hover-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0);
-  transition: background 0.25s;
-  pointer-events: none;
-}
-
-.asset-tile:hover .tile-hover-overlay {
-  background: rgba(0,0,0,0.06);
+  transform: scale(1.04);
 }
 
 /* ─── Page enter animation ──────────────────────────────────── */

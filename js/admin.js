@@ -374,7 +374,7 @@
       'padding-top:' + g.paddingTop + 'px',
       'padding-bottom:' + g.paddingBottom + 'px',
       'margin:0 auto',
-      'align-items:start',
+      g.rowHeight ? 'align-items:stretch' : 'align-items:start',
     ];
     if (g.maxWidth)  styleParts.push('max-width:' + g.maxWidth + 'px');
     if (g.rowHeight) styleParts.push('grid-auto-rows:' + g.rowHeight + 'px');
@@ -382,15 +382,15 @@
 
     var items = '';
     client.assets.forEach(function (asset, i) {
-      var cols     = asset.cols || 1;
-      var rows     = asset.rows || 1;
-      var colStyle = cols > 1 ? 'grid-column:span ' + Math.min(cols, g.columns) : '';
-      var rowStyle = rows > 1 ? 'grid-row:span ' + rows : '';
-      var spanCSS  = [colStyle, rowStyle].filter(Boolean).join(';');
-      var rowsAttr = rows > 1 ? ' data-rows="' + rows + '"' : '';
-      var sel      = i === selectedIndex ? ' selected' : '';
-      var alignSelf = rows > 1 ? 'align-self:stretch;' : '';
-      var imgStyle  = rows > 1 ? 'width:100%;height:100%;object-fit:cover;display:block;pointer-events:none' : 'width:100%;height:auto;display:block;pointer-events:none';
+      var cols      = asset.cols || 1;
+      var rows      = asset.rows || 1;
+      var colStyle  = cols > 1 ? 'grid-column:span ' + Math.min(cols, g.columns) : '';
+      var rowStyle  = rows > 1 ? 'grid-row:span ' + rows : '';
+      var spanCSS   = [colStyle, rowStyle].filter(Boolean).join(';');
+      var rowsAttr  = rows > 1 ? ' data-rows="' + rows + '"' : '';
+      var sel       = i === selectedIndex ? ' selected' : '';
+      var alignSelf = (g.rowHeight > 0 || rows > 1) ? 'align-self:stretch;' : '';
+      var imgStyle  = 'width:100%;height:auto;display:block;pointer-events:none';
       var media    = asset.type === 'video'
         ? '<video src="' + escAttr(asset.file) + '" muted autoplay loop playsinline style="' + imgStyle + '"></video>'
         : '<img src="' + escAttr(asset.file) + '" loading="lazy" style="' + imgStyle + '">';

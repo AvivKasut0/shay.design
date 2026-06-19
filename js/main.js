@@ -64,7 +64,7 @@
       'padding-top:' + g.paddingTop + 'px',
       'padding-bottom:' + g.paddingBottom + 'px',
       'margin:0 auto',
-      'align-items:start',
+      g.rowHeight ? 'align-items:stretch' : 'align-items:start',
     ];
     if (g.maxWidth)  parts.push('max-width:' + g.maxWidth + 'px');
     if (g.rowHeight) parts.push('grid-auto-rows:' + g.rowHeight + 'px');
@@ -163,7 +163,6 @@
       return (
         '<div class="asset-tile"' + styleAttr + rowsAttr + ' data-index="' + i + '">' +
           mediaHTML({ file: asset.file, type: asset.type, name: client.name }, false) +
-          '<div class="tile-hover-overlay"></div>' +
         '</div>'
       );
     }).join('');

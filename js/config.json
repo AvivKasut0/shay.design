@@ -22,7 +22,7 @@
         "maxWidth": null,
         "paddingTop": 36,
         "paddingBottom": 0,
-        "rowHeight": 520,
+        "rowHeight": 450,
         "tablet": {
           "columns": 2,
           "rowHeight": 230
