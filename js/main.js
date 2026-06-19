@@ -211,6 +211,16 @@
       if (e.key === 'ArrowLeft')  navigate(-1);
       if (e.key === 'ArrowRight') navigate(1);
     });
+
+    // Touch swipe for mobile
+    var touchStartX = 0;
+    lb.el.addEventListener('touchstart', function (e) {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    lb.el.addEventListener('touchend', function (e) {
+      var dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 50) navigate(dx < 0 ? 1 : -1);
+    }, { passive: true });
   }
 
   function openLightbox(index) {

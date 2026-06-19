@@ -461,7 +461,6 @@ main#app { flex: 1; }
   .client-page-header { min-height: 4rem; }
   .back-btn { top: 0; }
 
-  .lb-nav   { padding: 10px 13px; font-size: 0.9rem; }
-  .lb-prev  { left: 8px; }
-  .lb-next  { right: 8px; }
+  /* On mobile: hide side arrows, swipe handles navigation */
+  .lb-nav { display: none; }
 }
