@@ -73,16 +73,12 @@
   }
 
   // ── Apply designer styles as CSS custom properties ────────────────────────
-  function applyDesignerStyles() {
-    if (!CONFIG) return;
-    var s = CONFIG.designer.styles || {};
+  function applyStylesObj(s) {
     var r = document.documentElement;
-
     function set(prop, val, suffix) {
       if (val != null) r.style.setProperty(prop, val + (suffix || ''));
       else             r.style.removeProperty(prop);
     }
-
     set('--hero-title-size',     s.heroTitleSize,     'px');
     set('--hero-title-weight',   s.heroTitleWeight != null ? String(s.heroTitleWeight) : null, '');
     set('--hero-title-color',    s.heroTitleColor,    '');
@@ -93,6 +89,11 @@
     set('--proj-title-size',     s.projectTitleSize,  'px');
     set('--proj-title-weight',   s.projectTitleWeight != null ? String(s.projectTitleWeight) : null, '');
     set('--proj-title-color',    s.projectTitleColor, '');
+  }
+
+  function applyDesignerStyles() {
+    if (!CONFIG) return;
+    applyStylesObj(CONFIG.designer.styles || {});
   }
 
   // ── Persistent page info ─────────────────────────────────────────────────
@@ -425,6 +426,71 @@
 
     if (msg.type === 'theme-change') {
       document.documentElement.setAttribute('data-theme', msg.theme);
+      return;
+    }
+
+    // Targeted updates — no re-render, no blink ──────────────────────────────
+
+    if (msg.type === 'styles-update') {
+      applyStylesObj(msg.styles || {});
+      if (CONFIG) CONFIG.designer.styles = msg.styles;
+      return;
+    }
+
+    if (msg.type === 'hero-text-update') {
+      if (CONFIG) { CONFIG.designer.name = msg.name; CONFIG.designer.tagline = msg.tagline; }
+      document.title = msg.name;
+      var navLogoEl = document.getElementById('nav-logo');
+      if (navLogoEl && !navLogoEl.querySelector('img')) navLogoEl.textContent = msg.name;
+      var footerNameEl = document.getElementById('footer-name');
+      if (footerNameEl) footerNameEl.textContent = msg.name;
+      var heroH1 = app && app.querySelector('.hero h1');
+      if (heroH1) heroH1.textContent = msg.name;
+      var heroP = app && app.querySelector('.hero p');
+      if (heroP) heroP.textContent = msg.tagline || '';
+      return;
+    }
+
+    if (msg.type === 'project-text-update') {
+      var titleEl = app && app.querySelector('.client-page-title');
+      if (titleEl) titleEl.textContent = msg.name;
+      var catEl = app && app.querySelector('.client-page-category');
+      if (catEl) catEl.textContent = msg.category || '';
+      setBreadcrumb(msg.name);
+      return;
+    }
+
+    if (msg.type === 'logo-size-update') {
+      var tiles = app ? app.querySelectorAll('.client-tile') : [];
+      var logoTile = tiles[msg.clientIndex];
+      if (logoTile) {
+        var logoImg = logoTile.querySelector(':scope > img');
+        if (logoImg) logoImg.style.maxHeight = msg.size + 'px';
+      }
+      return;
+    }
+
+    if (msg.type === 'tile-attr-update') {
+      var tiles2 = app ? app.querySelectorAll('.client-tile') : [];
+      var attrTile = tiles2[msg.clientIndex];
+      if (attrTile) attrTile.dataset.size = msg.tileSize;
+      return;
+    }
+
+    if (msg.type === 'asset-span-update') {
+      var assetTiles = app ? app.querySelectorAll('.asset-tile') : [];
+      var spanTile = assetTiles[msg.assetIndex];
+      if (spanTile) {
+        var colSpan = msg.cols > 1 ? 'grid-column:span ' + Math.min(msg.cols, msg.totalCols) : '';
+        var rowSpan = msg.rows > 1 ? 'grid-row:span '    + msg.rows                           : '';
+        spanTile.style.cssText = [colSpan, rowSpan].filter(Boolean).join(';');
+      }
+      return;
+    }
+
+    if (msg.type === 'grid-style-update') {
+      var gridEl = document.getElementById('asset-grid');
+      if (gridEl) gridEl.setAttribute('style', msg.style);
       return;
     }
   });

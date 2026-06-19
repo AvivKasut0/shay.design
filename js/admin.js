@@ -15,7 +15,6 @@
       : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
   }
 
-  // ── VP icons ──────────────────────────────────────────────────────────────
   var VP_ICONS = {
     desktop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
     tablet:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
@@ -31,12 +30,12 @@
   var activeBP       = 'desktop';
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
-  var $tabs        = document.getElementById('admin-tabs');
-  var $sidebar     = document.getElementById('sidebar');
-  var $frame       = document.getElementById('preview-frame');
-  var $toolbar     = document.getElementById('preview-toolbar');
-  var $save        = document.getElementById('btn-save');
-  var $viewSiteBtn = document.querySelector('.btn-ghost[href="/"]');
+  var $tabs    = document.getElementById('admin-tabs');
+  var $sidebar = document.getElementById('sidebar');
+  var $frame   = document.getElementById('preview-frame');
+  var $toolbar = document.getElementById('preview-toolbar');
+  var $save    = document.getElementById('btn-save');
+  var $viewBtn = document.querySelector('.btn-ghost[href="/"]');
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function esc(s) {
@@ -81,21 +80,42 @@
   }
 
   function setDeviceMode(active) {
-    var previewEl = document.getElementById('preview');
-    if (active) previewEl.classList.add('device-mode');
-    else        previewEl.classList.remove('device-mode');
+    var el = document.getElementById('preview');
+    if (active) el.classList.add('device-mode');
+    else        el.classList.remove('device-mode');
   }
 
-  // ── iframe messaging ──────────────────────────────────────────────────────
-  function sendToPreview() {
+  // Mirrors gridStyle() in main.js — compute CSS style string for the asset grid
+  function computeGridStyle(g) {
+    var parts = [
+      'display:grid',
+      'grid-template-columns:repeat(' + g.columns + ',1fr)',
+      'gap:' + g.gap + 'px',
+      'width:' + g.width + '%',
+      'padding-top:' + g.paddingTop + 'px',
+      'padding-bottom:' + g.paddingBottom + 'px',
+      'margin:0 auto',
+      g.rowHeight ? 'align-items:stretch' : 'align-items:start',
+    ];
+    if (g.maxWidth)  parts.push('max-width:' + g.maxWidth + 'px');
+    if (g.rowHeight) parts.push('grid-auto-rows:' + g.rowHeight + 'px');
+    return parts.join(';');
+  }
+
+  // ── Messaging ─────────────────────────────────────────────────────────────
+  // Targeted send — posts a single surgical update, no re-render in iframe
+  function sendMsg(data) {
     if (!$frame || !$frame.contentWindow) return;
-    try {
-      $frame.contentWindow.postMessage({
-        type:   'preview-update',
-        config: config,
-        route:  view === 'home' ? '' : 'client/' + view,
-      }, '*');
-    } catch (e) {}
+    try { $frame.contentWindow.postMessage(data, '*'); } catch (e) {}
+  }
+
+  // Full re-render — only for structural changes: navigation, add/remove, logo upload
+  function sendToPreview() {
+    sendMsg({
+      type:   'preview-update',
+      config: config,
+      route:  view === 'home' ? '' : 'client/' + view,
+    });
   }
 
   function applyViewport() {
@@ -106,15 +126,8 @@
     else                            $frame.style.maxWidth = '';
   }
 
-  // Called after each iframe load to sync current state
   $frame.addEventListener('load', function () {
-    // Sync theme
-    try {
-      $frame.contentWindow.postMessage({
-        type: 'theme-change',
-        theme: document.documentElement.getAttribute('data-theme'),
-      }, '*');
-    } catch (e) {}
+    try { $frame.contentWindow.postMessage({ type: 'theme-change', theme: document.documentElement.getAttribute('data-theme') }, '*'); } catch (e) {}
     if (config) sendToPreview();
   });
 
@@ -126,15 +139,14 @@
     if (msg.type === 'tile-click' && view === 'home') {
       selectedIndex = msg.index;
       renderSidebar();
-      // Highlight selected tile in iframe
-      try { $frame.contentWindow.postMessage({ type: 'preview-select', page: 'tile', index: selectedIndex }, '*'); } catch (ex) {}
+      sendMsg({ type: 'preview-select', page: 'tile', index: selectedIndex });
       return;
     }
 
     if (msg.type === 'asset-click' && view !== 'home') {
       selectedIndex = msg.index;
       renderSidebar();
-      try { $frame.contentWindow.postMessage({ type: 'preview-select', page: 'asset', index: selectedIndex }, '*'); } catch (ex) {}
+      sendMsg({ type: 'preview-select', page: 'asset', index: selectedIndex });
       return;
     }
 
@@ -143,9 +155,9 @@
       if (!client) return;
       var moved = client.assets.splice(msg.from, 1)[0];
       client.assets.splice(msg.to, 0, moved);
-      if      (selectedIndex === msg.from)                                   selectedIndex = msg.to;
-      else if (selectedIndex > msg.from && selectedIndex <= msg.to)          selectedIndex--;
-      else if (selectedIndex < msg.from && selectedIndex >= msg.to)          selectedIndex++;
+      if      (selectedIndex === msg.from)                          selectedIndex = msg.to;
+      else if (selectedIndex > msg.from && selectedIndex <= msg.to) selectedIndex--;
+      else if (selectedIndex < msg.from && selectedIndex >= msg.to) selectedIndex++;
       markDirty();
       renderSidebar();
       sendToPreview();
@@ -160,7 +172,7 @@
     }
   });
 
-  // ── Theme toggle in admin bar ─────────────────────────────────────────────
+  // ── Theme toggle ──────────────────────────────────────────────────────────
   (function () {
     var btn = document.createElement('button');
     btn.className = 'btn btn-ghost';
@@ -173,8 +185,7 @@
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
       btn.innerHTML = themeIcon();
-      // Sync iframe theme
-      try { $frame.contentWindow.postMessage({ type: 'theme-change', theme: next }, '*'); } catch (ex) {}
+      sendMsg({ type: 'theme-change', theme: next });
     });
   })();
 
@@ -214,14 +225,14 @@
     if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); $save.click(); }
   });
 
-  // ── Render all ────────────────────────────────────────────────────────────
+  // ── Render all (structural change) ───────────────────────────────────────
   function renderAll() {
     renderTabs();
     renderToolbar();
     renderSidebar();
     sendToPreview();
     applyViewport();
-    if ($viewSiteBtn) $viewSiteBtn.href = view === 'home' ? '/' : '/#client/' + view;
+    if ($viewBtn) $viewBtn.href = view === 'home' ? '/' : '/#client/' + view;
   }
 
   // ── Viewport toolbar ──────────────────────────────────────────────────────
@@ -243,6 +254,8 @@
         activeBP = btn.dataset.bp;
         renderToolbar();
         applyViewport();
+        // Grid display depends on breakpoint — full update needed
+        if (view !== 'home') sendToPreview();
       });
     });
   }
@@ -292,13 +305,13 @@
     }
   }
 
-  // ── Sidebar ───────────────────────────────────────────────────────────────
+  // ── Sidebar dispatch ──────────────────────────────────────────────────────
   function renderSidebar() {
     if (view === 'home') renderHomeSidebar();
     else                 renderProjectSidebar();
   }
 
-  // ── Logo field ────────────────────────────────────────────────────────────
+  // ── Logo field HTML ───────────────────────────────────────────────────────
   function logoFieldHTML(src, inputId, removeBtnId) {
     var v = Date.now();
     var html = '<div class="logo-field">';
@@ -315,7 +328,7 @@
     return html;
   }
 
-  // ── Style control rows ────────────────────────────────────────────────────
+  // ── Style control row builders ────────────────────────────────────────────
   function styleSliderRow(label, skey, val, min, max, step, unit) {
     val = (val != null) ? val : 0;
     return (
@@ -354,8 +367,12 @@
     return html;
   }
 
+  // Bind style inputs — sends targeted styles-update (no page re-render, no blink)
   function bindStyleInputs() {
-    // Sliders + numbers (numeric)
+    function dispatchStyles() {
+      sendMsg({ type: 'styles-update', styles: config.designer.styles || {} });
+    }
+
     $sidebar.querySelectorAll('input[type="range"][data-skey], input[type="number"][data-skey]').forEach(function (el) {
       el.addEventListener('input', function () {
         var key = el.dataset.skey;
@@ -364,13 +381,12 @@
         config.designer.styles[key] = val;
         markDirty();
         $sidebar.querySelectorAll('[data-skey="' + key + '"]').forEach(function (s) {
-          if (s !== el && (s.tagName === 'INPUT')) s.value = val;
+          if (s !== el && s.tagName === 'INPUT') s.value = val;
         });
-        sendToPreview();
+        dispatchStyles();
       });
     });
 
-    // Color inputs
     $sidebar.querySelectorAll('input[type="color"][data-skey]').forEach(function (el) {
       el.addEventListener('input', function () {
         var key = el.dataset.skey;
@@ -379,11 +395,10 @@
         var autoBtn = $sidebar.querySelector('.btn-auto[data-skey="' + key + '"]');
         if (autoBtn) { autoBtn.classList.remove('is-auto'); autoBtn.textContent = '✕'; autoBtn.title = 'Reset to auto'; }
         markDirty();
-        sendToPreview();
+        dispatchStyles();
       });
     });
 
-    // Auto (reset) buttons
     $sidebar.querySelectorAll('.btn-auto[data-skey]').forEach(function (el) {
       el.addEventListener('click', function () {
         var key = el.dataset.skey;
@@ -392,28 +407,26 @@
         el.textContent = 'auto';
         el.title = 'Auto — follows theme';
         markDirty();
-        sendToPreview();
+        dispatchStyles();
       });
     });
 
-    // Weight selects
     $sidebar.querySelectorAll('select[data-skey]').forEach(function (el) {
       el.addEventListener('change', function () {
         var key = el.dataset.skey;
         if (!config.designer.styles) config.designer.styles = {};
         config.designer.styles[key] = parseInt(this.value, 10);
         markDirty();
-        sendToPreview();
+        dispatchStyles();
       });
     });
   }
 
   // ── Home sidebar ──────────────────────────────────────────────────────────
   function renderHomeSidebar() {
-    var s  = config.designer.styles || {};
+    var s = config.designer.styles || {};
     var html = '';
 
-    // General
     html += '<div class="sidebar-section">';
     html += '<p class="section-title">General</p>';
     html += '<div class="ctrl-row"><span class="ctrl-label">Title</span><input type="text" class="ctrl-text" id="edit-site-title" value="' + escAttr(config.designer.name) + '"></div>';
@@ -422,33 +435,31 @@
     html += logoFieldHTML(config.designer.logo, 'site-logo-input', 'btn-remove-site-logo');
     html += '</div>';
 
-    // Hero typography
     html += '<div class="sidebar-section">';
     html += '<p class="section-title">Hero</p>';
-    html += styleSliderRow('Title size',  'heroTitleSize',     s.heroTitleSize    != null ? s.heroTitleSize    : 52, 16, 120, 1, 'px');
-    html += styleWeightRow('Title weight','heroTitleWeight',   s.heroTitleWeight  != null ? s.heroTitleWeight  : 300);
+    html += styleSliderRow('Title size',  'heroTitleSize',     s.heroTitleSize     != null ? s.heroTitleSize     : 52, 12, 120, 1, 'px');
+    html += styleWeightRow('Title weight','heroTitleWeight',   s.heroTitleWeight   != null ? s.heroTitleWeight   : 300);
     html += styleColorRow ('Title color', 'heroTitleColor',    '#111111');
-    html += styleSliderRow('Sub size',    'heroSubtitleSize',  s.heroSubtitleSize != null ? s.heroSubtitleSize : 16, 10, 48,  1, 'px');
+    html += styleSliderRow('Sub size',    'heroSubtitleSize',  s.heroSubtitleSize  != null ? s.heroSubtitleSize  : 16, 8, 48,  1, 'px');
     html += styleColorRow ('Sub color',   'heroSubtitleColor', '#888888');
-    html += styleSliderRow('Pad top',     'heroPaddingTop',    s.heroPaddingTop   != null ? s.heroPaddingTop   : 88, 0, 200, 4, 'px');
-    html += styleSliderRow('Pad bottom',  'heroPaddingBottom', s.heroPaddingBottom!= null ? s.heroPaddingBottom: 64, 0, 200, 4, 'px');
+    html += styleSliderRow('Pad top',     'heroPaddingTop',    s.heroPaddingTop    != null ? s.heroPaddingTop    : 88, 0, 200, 4, 'px');
+    html += styleSliderRow('Pad bottom',  'heroPaddingBottom', s.heroPaddingBottom != null ? s.heroPaddingBottom : 64, 0, 200, 4, 'px');
     html += '</div>';
 
-    // Home tiles
     html += '<div class="sidebar-section">';
     html += '<p class="section-title">Home Tiles</p>';
     html += '<p style="font-size:11px;color:var(--muted);margin-bottom:0">Click a tile in the preview to select it.</p>';
     html += '</div>';
 
     if (selectedIndex >= 0 && config.clients[selectedIndex]) {
-      var c    = config.clients[selectedIndex];
+      var c = config.clients[selectedIndex];
       var logoH = c.logoSize || 120;
       html += '<div class="sidebar-section">';
       html += '<p class="section-title">' + esc(c.name) + '</p>';
       html += tileSizeSelector(c.tileSize || 'featured');
       html += '<div class="ctrl-row" style="margin-top:14px"><span class="ctrl-label">Logo size</span>';
-      html += '<input type="range" class="ctrl-slider" id="logo-size-slider" min="40" max="300" step="4" value="' + logoH + '">';
-      html += '<input type="number" class="ctrl-num" id="logo-size-num" min="40" max="300" value="' + logoH + '">';
+      html += '<input type="range"  class="ctrl-slider" id="logo-size-slider" min="20" max="500" step="8" value="' + logoH + '">';
+      html += '<input type="number" class="ctrl-num"    id="logo-size-num"    min="20" max="500"          value="' + logoH + '">';
       html += '<span class="ctrl-unit">px</span></div>';
       html += '</div>';
     }
@@ -463,7 +474,10 @@
     html += '<div style="display:flex;flex-wrap:wrap;gap:5px">';
     sizes.forEach(function (s) {
       var a = current === s;
-      html += '<button class="size-btn' + (a ? ' active' : '') + '" data-size="' + s + '" style="padding:4px 10px;border:1px solid ' + (a ? '#111' : '#ddd') + ';border-radius:3px;font-size:11px;background:' + (a ? '#111' : '#fff') + ';color:' + (a ? '#fff' : '#555') + ';cursor:pointer">' + s + '</button>';
+      html += '<button class="size-btn' + (a ? ' active' : '') + '" data-size="' + s
+        + '" style="padding:4px 10px;border:1px solid ' + (a ? '#111' : '#ddd')
+        + ';border-radius:3px;font-size:11px;background:' + (a ? '#111' : '#fff')
+        + ';color:' + (a ? '#fff' : '#555') + ';cursor:pointer">' + s + '</button>';
     });
     html += '</div>';
     return html;
@@ -474,7 +488,8 @@
     if (titleInput) {
       titleInput.addEventListener('input', function () {
         config.designer.name = this.value;
-        markDirty(); sendToPreview();
+        markDirty();
+        sendMsg({ type: 'hero-text-update', name: config.designer.name, tagline: config.designer.tagline || '', logo: config.designer.logo || null });
       });
     }
 
@@ -482,7 +497,8 @@
     if (taglineInput) {
       taglineInput.addEventListener('input', function () {
         config.designer.tagline = this.value;
-        markDirty(); sendToPreview();
+        markDirty();
+        sendMsg({ type: 'hero-text-update', name: config.designer.name, tagline: config.designer.tagline || '', logo: config.designer.logo || null });
       });
     }
 
@@ -490,8 +506,7 @@
     if (siteLogoInput) {
       siteLogoInput.addEventListener('change', function () {
         if (!this.files[0]) return;
-        var fd = new FormData();
-        fd.append('logo', this.files[0]);
+        var fd = new FormData(); fd.append('logo', this.files[0]);
         fetch('/api/logo/site', { method: 'POST', body: fd })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -523,16 +538,17 @@
           config.clients[selectedIndex].tileSize = btn.dataset.size;
           markDirty();
           renderHomeSidebar();
-          sendToPreview();
+          sendMsg({ type: 'tile-attr-update', clientIndex: selectedIndex, tileSize: btn.dataset.size });
         });
       });
 
       var logoSlider = document.getElementById('logo-size-slider');
       var logoNum    = document.getElementById('logo-size-num');
+
       function updateLogoSize(val) {
         config.clients[selectedIndex].logoSize = parseInt(val, 10);
         markDirty();
-        sendToPreview();
+        sendMsg({ type: 'logo-size-update', clientIndex: selectedIndex, size: parseInt(val, 10) });
       }
       if (logoSlider) logoSlider.addEventListener('input', function () { logoNum.value = this.value; updateLogoSize(this.value); });
       if (logoNum)    logoNum.addEventListener('input',    function () { logoSlider.value = this.value; updateLogoSize(this.value); });
@@ -552,11 +568,10 @@
   function renderProjectSidebar() {
     var client = currentClient();
     if (!client) return;
-    var g      = resolvedG(client);
+    var g       = resolvedG(client);
     var logoSrc = projectLogoSrc(client);
     var s       = config.designer.styles || {};
 
-    // Project info
     var html = '<div class="sidebar-section">';
     html += '<p class="section-title">Project</p>';
     html += '<div class="ctrl-row"><span class="ctrl-label">Name</span><input type="text" class="ctrl-text" id="edit-client-name" value="' + escAttr(client.name) + '"></div>';
@@ -566,40 +581,36 @@
     html += '<button class="btn-remove" id="btn-delete-client" style="margin-top:12px">Delete Project</button>';
     html += '</div>';
 
-    // Page typography (global setting, shown here for project context)
     html += '<div class="sidebar-section">';
     html += '<p class="section-title">Page Title</p>';
-    html += styleSliderRow('Size',   'projectTitleSize',   s.projectTitleSize   != null ? s.projectTitleSize   : 28,  12, 80,  1, 'px');
+    html += styleSliderRow('Size',   'projectTitleSize',   s.projectTitleSize   != null ? s.projectTitleSize   : 28, 12, 80, 1, 'px');
     html += styleWeightRow('Weight', 'projectTitleWeight', s.projectTitleWeight != null ? s.projectTitleWeight : 300);
     html += styleColorRow ('Color',  'projectTitleColor',  '#111111');
     html += '</div>';
 
-    // Grid settings
     var bpLabel = activeBP === 'desktop' ? '' : ' · ' + activeBP.charAt(0).toUpperCase() + activeBP.slice(1);
     html += '<div class="sidebar-section">';
     html += '<p class="section-title">Grid<span style="text-transform:none;font-weight:400;letter-spacing:0;opacity:0.6">' + bpLabel + '</span></p>';
-    html += sliderRow('Columns',    'columns',       g.columns,       1, 8,   1, '');
-    html += sliderRow('Row height', 'rowHeight',     g.rowHeight||0,  0, 800, 10,'px');
-    html += sliderRow('Gutter',     'gap',           g.gap,           0, 60,  1, 'px');
-    html += sliderRow('Width %',    'width',         g.width,         20,100, 1, '%');
-    html += numRow   ('Max width',  'maxWidth',      g.maxWidth||0,       'px');
-    html += sliderRow('Above',      'paddingTop',    g.paddingTop,    0, 200, 4, 'px');
-    html += sliderRow('Below',      'paddingBottom', g.paddingBottom, 0, 200, 4, 'px');
+    html += sliderRow('Columns',    'columns',       g.columns,        1, 8,   1,  '');
+    html += sliderRow('Row height', 'rowHeight',     g.rowHeight || 0, 0, 800, 10, 'px');
+    html += sliderRow('Gutter',     'gap',           g.gap,            0, 60,  1,  'px');
+    html += sliderRow('Width %',    'width',         g.width,          20,100, 1,  '%');
+    html += numRow   ('Max width',  'maxWidth',      g.maxWidth || 0,      'px');
+    html += sliderRow('Above',      'paddingTop',    g.paddingTop,     0, 200, 4,  'px');
+    html += sliderRow('Below',      'paddingBottom', g.paddingBottom,  0, 200, 4,  'px');
     html += '</div>';
 
-    // Selected asset
     if (selectedIndex >= 0 && client.assets[selectedIndex]) {
       var asset = client.assets[selectedIndex];
       html += '<div class="sidebar-section">';
       html += '<p class="section-title">Selected Image</p>';
       html += '<img class="selected-thumb" src="' + escAttr(asset.file) + '" onerror="this.style.display=\'none\'">';
-      html += sliderRow('Col span', 'asset-cols', asset.cols||1, 1, g.columns, 1, '');
-      html += sliderRow('Row span', 'asset-rows', asset.rows||1, 1, 6,         1, '');
+      html += sliderRow('Col span', 'asset-cols', asset.cols || 1, 1, g.columns, 1, '');
+      html += sliderRow('Row span', 'asset-rows', asset.rows || 1, 1, 6,         1, '');
       html += '<button class="btn-remove" id="btn-remove">Remove from grid</button>';
       html += '</div>';
     }
 
-    // Add to grid
     var folder    = clientFolder(client);
     var folderKey = folder ? folder.replace('Assets/', '') : client.name;
     var allFiles  = availableFiles[folderKey] || [];
@@ -650,14 +661,19 @@
     var nameInput = document.getElementById('edit-client-name');
     if (nameInput) {
       nameInput.addEventListener('input', function () {
-        client.name = this.value; markDirty(); renderTabs();
+        client.name = this.value;
+        markDirty();
+        renderTabs();
+        sendMsg({ type: 'project-text-update', name: client.name, category: client.category || '' });
       });
     }
 
     var catInput = document.getElementById('edit-client-category');
     if (catInput) {
       catInput.addEventListener('input', function () {
-        client.category = this.value; markDirty(); sendToPreview();
+        client.category = this.value;
+        markDirty();
+        sendMsg({ type: 'project-text-update', name: client.name, category: client.category || '' });
       });
     }
 
@@ -665,8 +681,7 @@
     if (projLogoInput) {
       projLogoInput.addEventListener('change', function () {
         if (!this.files[0]) return;
-        var fd = new FormData();
-        fd.append('logo', this.files[0]);
+        var fd = new FormData(); fd.append('logo', this.files[0]);
         fetch('/api/logo/project/' + client.id, { method: 'POST', body: fd })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -705,7 +720,6 @@
       });
     }
 
-    // Grid sliders (data-key, not data-skey)
     $sidebar.querySelectorAll('input[type="range"][data-key], input[type="number"][data-key]').forEach(function (el) {
       el.addEventListener('input', function () {
         var key = el.dataset.key;
@@ -715,10 +729,10 @@
           if (selectedIndex >= 0 && client.assets[selectedIndex]) {
             var cols = Math.max(1, Math.min(g.columns, Math.round(val)));
             if (cols === 1) delete client.assets[selectedIndex].cols;
-            else client.assets[selectedIndex].cols = cols;
+            else            client.assets[selectedIndex].cols = cols;
             markDirty();
             $sidebar.querySelectorAll('[data-key="asset-cols"]').forEach(function (s) { s.value = cols; });
-            sendToPreview();
+            sendMsg({ type: 'asset-span-update', assetIndex: selectedIndex, cols: cols, rows: client.assets[selectedIndex].rows || 1, totalCols: g.columns });
           }
           return;
         }
@@ -726,10 +740,10 @@
           if (selectedIndex >= 0 && client.assets[selectedIndex]) {
             var rows = Math.max(1, Math.round(val));
             if (rows === 1) delete client.assets[selectedIndex].rows;
-            else client.assets[selectedIndex].rows = rows;
+            else            client.assets[selectedIndex].rows = rows;
             markDirty();
             $sidebar.querySelectorAll('[data-key="asset-rows"]').forEach(function (s) { s.value = rows; });
-            sendToPreview();
+            sendMsg({ type: 'asset-span-update', assetIndex: selectedIndex, cols: client.assets[selectedIndex].cols || 1, rows: rows, totalCols: g.columns });
           }
           return;
         }
@@ -743,8 +757,17 @@
         }
         markDirty();
         $sidebar.querySelectorAll('[data-key="' + key + '"]').forEach(function (s) { s.value = val; });
-        if (key === 'columns') { selectedIndex = -1; renderProjectSidebar(); }
-        sendToPreview();
+
+        if (key === 'columns') {
+          // Column count affects asset clamping — needs full re-render
+          selectedIndex = -1;
+          renderProjectSidebar();
+          sendToPreview();
+        } else {
+          // All other grid props: update only the grid element's style — no blink
+          var newG = resolvedG(client);
+          sendMsg({ type: 'grid-style-update', style: computeGridStyle(newG) });
+        }
       });
     });
 

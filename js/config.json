@@ -9,11 +9,12 @@
       "behance": "https://lenka.co.il"
     },
     "styles": {
-      "heroTitleSize": 75,
+      "heroTitleSize": 72,
       "heroTitleWeight": 300,
       "heroPaddingTop": 68,
       "heroPaddingBottom": 64,
-      "heroSubtitleSize": 16
+      "heroSubtitleSize": 16,
+      "projectTitleSize": 40
     }
   },
   "clients": [
@@ -22,7 +23,7 @@
       "name": "Animal Care",
       "category": "Social Media",
       "tileSize": "large",
-      "logoSize": 300,
+      "logoSize": 500,
       "grid": {
         "columns": 2,
         "gap": 26,
@@ -87,13 +88,13 @@
     {
       "id": "sawt",
       "name": "Sawt",
-      "category": "Branding",
+      "category": "music production school",
       "tileSize": "large",
-      "logoSize": 120,
+      "logoSize": 324,
       "grid": {
-        "columns": 2,
+        "columns": 4,
         "gap": 13,
-        "width": 46,
+        "width": 71,
         "maxWidth": 0,
         "paddingTop": 28,
         "paddingBottom": 12,
@@ -106,13 +107,13 @@
       "assets": [
         {
           "file": "Assets/Sawt/d45fc2ee409f4d0996554d5b2537b474rw1200.gif",
-          "type": "gif",
-          "cols": 2
+          "type": "gif"
         },
         {
           "file": "Assets/Sawt/ee35099299f745afb6e0fca33be91a30rw1200.gif",
           "type": "gif",
-          "cols": 1
+          "cols": 2,
+          "rows": 2
         },
         {
           "file": "Assets/Sawt/UAe6v6pFgbposter.jpg",
@@ -129,7 +130,7 @@
       "name": "Test",
       "category": "Ads",
       "tileSize": "large",
-      "logoSize": 120,
+      "logoSize": 212,
       "logo": "Assets/Test/logo.png",
       "grid": {
         "columns": 2,
