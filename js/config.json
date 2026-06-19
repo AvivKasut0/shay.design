@@ -87,7 +87,12 @@
         "width": 46,
         "maxWidth": 0,
         "paddingTop": 28,
-        "paddingBottom": 12
+        "paddingBottom": 12,
+        "mobile": {
+          "columns": 1,
+          "gap": 14,
+          "width": 70
+        }
       },
       "assets": [
         {

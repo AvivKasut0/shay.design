@@ -155,8 +155,9 @@
     var style = gridStyle(g);
 
     var items = client.assets.map(function (asset, i) {
-      var colSpan  = asset.cols > 1 ? 'grid-column:span ' + asset.cols : '';
-      var rowSpan  = asset.rows > 1 ? 'grid-row:span '    + asset.rows : '';
+      var clampedCols = Math.min(asset.cols || 1, g.columns);
+      var colSpan  = clampedCols > 1 ? 'grid-column:span ' + clampedCols : '';
+      var rowSpan  = asset.rows > 1  ? 'grid-row:span '    + asset.rows  : '';
       var spanCSS  = [colSpan, rowSpan].filter(Boolean).join(';');
       var styleAttr = spanCSS ? ' style="' + spanCSS + '"' : '';
       var rowsAttr  = asset.rows > 1 ? ' data-rows="' + asset.rows + '"' : '';
