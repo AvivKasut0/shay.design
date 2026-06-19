@@ -14,7 +14,7 @@
       "id": "animal-care",
       "name": "Animal Care",
       "category": "Social Media",
-      "tileSize": "featured",
+      "tileSize": "large",
       "grid": {
         "columns": 2,
         "gap": 26,
@@ -22,7 +22,7 @@
         "maxWidth": null,
         "paddingTop": 36,
         "paddingBottom": 0,
-        "rowHeight": 450,
+        "rowHeight": 0,
         "tablet": {
           "columns": 2,
           "rowHeight": 230
@@ -80,7 +80,7 @@
       "id": "sawt",
       "name": "Sawt",
       "category": "Branding",
-      "tileSize": "featured",
+      "tileSize": "large",
       "grid": {
         "columns": 2,
         "gap": 13,
@@ -114,6 +114,33 @@
           "type": "image"
         }
       ]
+    },
+    {
+      "id": "test",
+      "name": "Test",
+      "category": "Ads",
+      "tileSize": "large",
+      "grid": {
+        "columns": 2,
+        "gap": 20,
+        "width": 80,
+        "maxWidth": 0,
+        "paddingTop": 40,
+        "paddingBottom": 0,
+        "rowHeight": 0
+      },
+      "assets": [
+        {
+          "file": "Assets/Test/0a40d792bd896b4c1d3dd439d13409a6.png",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Test/1 (1).gif",
+          "type": "gif",
+          "cols": 1
+        }
+      ],
+      "logo": "Assets/Test/logo.png"
     }
   ]
 }

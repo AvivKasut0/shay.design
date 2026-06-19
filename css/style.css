@@ -60,6 +60,13 @@ main#app { flex: 1; }
   flex-shrink: 0;
 }
 
+.nav-logo-img {
+  height: 30px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
 .nav-breadcrumb {
   font-size: 0.9rem;
   color: var(--text-muted);

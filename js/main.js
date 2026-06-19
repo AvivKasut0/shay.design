@@ -75,7 +75,12 @@
   function renderPageInfo() {
     var d = CONFIG.designer;
     document.title = d.name;
-    document.getElementById('nav-logo').textContent    = d.name;
+    var navLogo = document.getElementById('nav-logo');
+    if (d.logo) {
+      navLogo.innerHTML = '<img src="' + escAttr(d.logo) + '" alt="' + escAttr(d.name) + '" class="nav-logo-img">';
+    } else {
+      navLogo.textContent = d.name;
+    }
     document.getElementById('footer-name').textContent = d.name;
 
     var links = '';
@@ -104,6 +109,7 @@
 
   // ── Logo path helper ──────────────────────────────────────────────────────
   function clientLogoPath(client) {
+    if (client.logo) return client.logo;
     var first = client.assets[0] && client.assets[0].file;
     if (!first) return '';
     return first.substring(0, first.lastIndexOf('/')) + '/logo.png';

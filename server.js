@@ -111,6 +111,63 @@ app.post('/api/upload/:clientId', upload.array('files'), (req, res) => {
   }
 });
 
+// ── Logo management ───────────────────────────────────────────────────────────
+app.post('/api/logo/site', upload.single('logo'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file' });
+    const ext  = path.extname(req.file.originalname).toLowerCase() || '.png';
+    fs.mkdirSync(ASSETS_DIR, { recursive: true });
+    const dest = path.join(ASSETS_DIR, 'logo' + ext);
+    fs.renameSync(req.file.path, dest);
+    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    cfg.designer.logo = 'Assets/logo' + ext;
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    res.json({ ok: true, logo: cfg.designer.logo });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/logo/site', (req, res) => {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    delete cfg.designer.logo;
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/logo/project/:projectId', upload.single('logo'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file' });
+    const cfg    = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    const client = cfg.clients.find(c => c.id === req.params.projectId);
+    if (!client) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    const folderPath = client.assets[0]
+      ? client.assets[0].file.substring(0, client.assets[0].file.lastIndexOf('/'))
+      : 'Assets/' + client.name;
+    fs.mkdirSync(path.join(__dirname, folderPath), { recursive: true });
+    const ext  = path.extname(req.file.originalname).toLowerCase() || '.png';
+    const dest = path.join(__dirname, folderPath, 'logo' + ext);
+    fs.renameSync(req.file.path, dest);
+    client.logo = folderPath + '/logo' + ext;
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    res.json({ ok: true, logo: client.logo });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/logo/project/:projectId', (req, res) => {
+  try {
+    const cfg    = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    const client = cfg.clients.find(c => c.id === req.params.projectId);
+    if (!client) return res.status(404).json({ error: 'Project not found' });
+    delete client.logo;
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Asset discovery ──────────────────────────────────────────────────────────
 const MEDIA_RE = /\.(png|jpe?g|gif|webp|mp4|webm|mov)$/i;
 const ASSETS_DIR = path.join(__dirname, 'Assets');
@@ -124,7 +181,7 @@ app.get('/api/assets', (req, res) => {
       const full = path.join(ASSETS_DIR, dir);
       if (!fs.statSync(full).isDirectory()) return;
       result[dir] = fs.readdirSync(full)
-        .filter(f => MEDIA_RE.test(f) && f !== 'logo.png')
+        .filter(f => MEDIA_RE.test(f) && !/^logo\./i.test(f))
         .map(f => 'Assets/' + dir + '/' + f);
     });
 
