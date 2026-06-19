@@ -1,0 +1,114 @@
+{
+  "designer": {
+    "name": "Shay Design",
+    "tagline": "Graphic & Video Design · Ads & Social Media",
+    "email": "me@shay.design",
+    "social": {
+      "instagram": "https://lenka.co.il",
+      "linkedin": "https://lenka.co.il",
+      "behance": "https://lenka.co.il"
+    }
+  },
+  "clients": [
+    {
+      "id": "animal-care",
+      "name": "Animal Care",
+      "category": "Social Media",
+      "tileSize": "featured",
+      "grid": {
+        "columns": 2,
+        "gap": 26,
+        "width": 63,
+        "maxWidth": null,
+        "paddingTop": 36,
+        "paddingBottom": 0,
+        "rowHeight": 520,
+        "tablet": {
+          "columns": 2,
+          "rowHeight": 230
+        },
+        "mobile": {
+          "columns": 1,
+          "rowHeight": 240
+        }
+      },
+      "assets": [
+        {
+          "file": "Assets/Animal Care/6813a46af76a482c91cea35faa71e007rw1200.png",
+          "type": "image",
+          "cols": 1
+        },
+        {
+          "file": "Assets/Animal Care/c6058b49a7ef4906be82e27e0420b424rw1200.png",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Animal Care/685f10e758a2489aa12b4e933d209e22rw1200.png",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Animal Care/867ba17c91fb4b75b2003a11cdfc7880rw1200.png",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Animal Care/74109fd00e1046718913a7e0d4d2f326rw1200.png",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Animal Care/cfb3c642249545b589453c91832e711frw1200.png",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Animal Care/d7c6970e00fc4fbebb2a01fe90241f6drw1200.png",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Animal Care/e42c192b4af44e41bf596a0603b95f1crw1200.png",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Animal Care/f0c65ef48c0646728ae00000ecd26f51rw1200.png",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Animal Care/274fe1edf4b347f8973f488bbae41451rw1200.png",
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "sawt",
+      "name": "Sawt",
+      "category": "Branding",
+      "tileSize": "featured",
+      "grid": {
+        "columns": 2,
+        "gap": 13,
+        "width": 46,
+        "maxWidth": 0,
+        "paddingTop": 28,
+        "paddingBottom": 12
+      },
+      "assets": [
+        {
+          "file": "Assets/Sawt/d45fc2ee409f4d0996554d5b2537b474rw1200.gif",
+          "type": "gif",
+          "cols": 2
+        },
+        {
+          "file": "Assets/Sawt/ee35099299f745afb6e0fca33be91a30rw1200.gif",
+          "type": "gif",
+          "cols": 1
+        },
+        {
+          "file": "Assets/Sawt/UAe6v6pFgbposter.jpg",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Sawt/Vy7V4D3DX4poster.jpg",
+          "type": "image"
+        }
+      ]
+    }
+  ]
+}
