@@ -1,6 +1,7 @@
 (function () {
   'use strict';
 
+  var IS_PREVIEW = /[?&]preview=1/.test(location.search);
   var CONFIG = null;
 
   // ── Social icon SVGs ─────────────────────────────────────────────────────
@@ -54,7 +55,7 @@
     return base;
   }
 
-  // ── Grid inline style from resolved grid config ───────────────────────────
+  // ── Grid inline style ────────────────────────────────────────────────────
   function gridStyle(g) {
     var parts = [
       'display:grid',
@@ -71,16 +72,41 @@
     return parts.join(';');
   }
 
+  // ── Apply designer styles as CSS custom properties ────────────────────────
+  function applyDesignerStyles() {
+    if (!CONFIG) return;
+    var s = CONFIG.designer.styles || {};
+    var r = document.documentElement;
+
+    function set(prop, val, suffix) {
+      if (val != null) r.style.setProperty(prop, val + (suffix || ''));
+      else             r.style.removeProperty(prop);
+    }
+
+    set('--hero-title-size',     s.heroTitleSize,     'px');
+    set('--hero-title-weight',   s.heroTitleWeight != null ? String(s.heroTitleWeight) : null, '');
+    set('--hero-title-color',    s.heroTitleColor,    '');
+    set('--hero-subtitle-size',  s.heroSubtitleSize,  'px');
+    set('--hero-subtitle-color', s.heroSubtitleColor, '');
+    set('--hero-pt',             s.heroPaddingTop,    'px');
+    set('--hero-pb',             s.heroPaddingBottom, 'px');
+    set('--proj-title-size',     s.projectTitleSize,  'px');
+    set('--proj-title-weight',   s.projectTitleWeight != null ? String(s.projectTitleWeight) : null, '');
+    set('--proj-title-color',    s.projectTitleColor, '');
+  }
+
   // ── Persistent page info ─────────────────────────────────────────────────
   function renderPageInfo() {
     var d = CONFIG.designer;
     document.title = d.name;
+
     var navLogo = document.getElementById('nav-logo');
     if (d.logo) {
       navLogo.innerHTML = '<img src="' + escAttr(d.logo) + '" alt="' + escAttr(d.name) + '" class="nav-logo-img">';
     } else {
       navLogo.textContent = d.name;
     }
+
     document.getElementById('footer-name').textContent = d.name;
 
     var links = '';
@@ -95,6 +121,7 @@
     var emailEl = document.getElementById('footer-email');
     if (d.email) {
       emailEl.innerHTML = '<a href="mailto:' + escAttr(d.email) + '">' + esc(d.email) + '</a>';
+      emailEl.style.display = '';
     } else {
       emailEl.style.display = 'none';
     }
@@ -124,10 +151,14 @@
       var size     = client.tileSize || 'featured';
       var count    = client.assets.length;
       var countTxt = count + (count === 1 ? ' piece' : ' pieces');
+      var logoH    = client.logoSize || 120;
 
       return (
         '<a href="#client/' + escAttr(client.id) + '" class="bento-item client-tile" data-size="' + size + '">' +
-          '<img src="' + escAttr(logo) + '" alt="' + escAttr(client.name) + '" loading="lazy" onerror="this.style.display=\'none\'">' +
+          (logo
+            ? '<img src="' + escAttr(logo) + '" alt="' + escAttr(client.name) + '" loading="lazy"' +
+              ' style="max-height:' + logoH + 'px" onerror="this.style.display=\'none\'">'
+            : '') +
           '<div class="tile-info">' +
             '<span class="tile-name">' + esc(client.name) + '</span>' +
             '<span class="tile-count">' + esc(countTxt) + '</span>' +
@@ -139,7 +170,7 @@
     app.innerHTML = (
       '<header class="hero page-enter">' +
         '<h1>' + esc(CONFIG.designer.name) + '</h1>' +
-        '<p>'  + esc(CONFIG.designer.tagline) + '</p>' +
+        '<p>'  + esc(CONFIG.designer.tagline || '') + '</p>' +
       '</header>' +
       '<section class="page-section">' +
         '<div class="container">' +
@@ -147,6 +178,16 @@
         '</div>' +
       '</section>'
     );
+
+    if (IS_PREVIEW) {
+      // Intercept tile clicks — notify parent instead of navigating
+      app.querySelectorAll('.client-tile').forEach(function (el, i) {
+        el.addEventListener('click', function (e) {
+          e.preventDefault();
+          window.parent.postMessage({ type: 'tile-click', index: i }, '*');
+        });
+      });
+    }
   }
 
   // ── CLIENT PAGE ───────────────────────────────────────────────────────────
@@ -162,13 +203,14 @@
 
     var items = client.assets.map(function (asset, i) {
       var clampedCols = Math.min(asset.cols || 1, g.columns);
-      var colSpan  = clampedCols > 1 ? 'grid-column:span ' + clampedCols : '';
-      var rowSpan  = asset.rows > 1  ? 'grid-row:span '    + asset.rows  : '';
-      var spanCSS  = [colSpan, rowSpan].filter(Boolean).join(';');
-      var styleAttr = spanCSS ? ' style="' + spanCSS + '"' : '';
-      var rowsAttr  = asset.rows > 1 ? ' data-rows="' + asset.rows + '"' : '';
+      var colSpan     = clampedCols > 1 ? 'grid-column:span ' + clampedCols : '';
+      var rowSpan     = asset.rows > 1  ? 'grid-row:span '    + asset.rows  : '';
+      var spanCSS     = [colSpan, rowSpan].filter(Boolean).join(';');
+      var styleAttr   = spanCSS ? ' style="' + spanCSS + '"' : '';
+      var rowsAttr    = asset.rows > 1 ? ' data-rows="' + asset.rows + '"' : '';
+      var draggable   = IS_PREVIEW ? ' draggable="true"' : '';
       return (
-        '<div class="asset-tile"' + styleAttr + rowsAttr + ' data-index="' + i + '">' +
+        '<div class="asset-tile"' + styleAttr + rowsAttr + draggable + ' data-index="' + i + '">' +
           mediaHTML({ file: asset.file, type: asset.type, name: client.name }, false) +
         '</div>'
       );
@@ -189,11 +231,68 @@
       '</section>'
     );
 
-    document.getElementById('asset-grid').addEventListener('click', function (e) {
-      var tile = e.target.closest('.asset-tile');
-      if (!tile) return;
-      openLightbox(parseInt(tile.dataset.index, 10));
-    });
+    var grid = document.getElementById('asset-grid');
+
+    if (IS_PREVIEW) {
+      // Click → select asset (no lightbox in preview)
+      grid.addEventListener('click', function (e) {
+        var tile = e.target.closest('.asset-tile');
+        if (!tile) return;
+        window.parent.postMessage({ type: 'asset-click', index: parseInt(tile.dataset.index, 10) }, '*');
+      });
+
+      // Back button → tell parent to show home
+      var backBtn = app.querySelector('.back-btn');
+      if (backBtn) {
+        backBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          window.parent.postMessage({ type: 'navigate-home' }, '*');
+        });
+      }
+
+      // Drag-to-reorder
+      var dragSrcIndex = -1;
+      grid.addEventListener('dragstart', function (e) {
+        var tile = e.target.closest('.asset-tile');
+        if (!tile) return;
+        dragSrcIndex = parseInt(tile.dataset.index, 10);
+        e.dataTransfer.effectAllowed = 'move';
+        tile.style.opacity = '0.4';
+      });
+      grid.addEventListener('dragend', function (e) {
+        var tile = e.target.closest('.asset-tile');
+        if (tile) tile.style.opacity = '';
+        grid.querySelectorAll('.drag-over-preview').forEach(function (el) { el.classList.remove('drag-over-preview'); });
+      });
+      grid.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        var tile = e.target.closest('.asset-tile');
+        grid.querySelectorAll('.drag-over-preview').forEach(function (el) { el.classList.remove('drag-over-preview'); });
+        if (tile && parseInt(tile.dataset.index, 10) !== dragSrcIndex) tile.classList.add('drag-over-preview');
+      });
+      grid.addEventListener('drop', function (e) {
+        e.preventDefault();
+        var tile = e.target.closest('.asset-tile');
+        if (!tile) return;
+        var dest = parseInt(tile.dataset.index, 10);
+        if (dragSrcIndex === dest) return;
+        window.parent.postMessage({ type: 'asset-drop', from: dragSrcIndex, to: dest }, '*');
+      });
+
+    } else {
+      // Live site: click opens lightbox
+      grid.addEventListener('click', function (e) {
+        var tile = e.target.closest('.asset-tile');
+        if (!tile) return;
+        openLightbox(parseInt(tile.dataset.index, 10));
+      });
+    }
+  }
+
+  // ── Route helper (without scroll) ─────────────────────────────────────────
+  function renderByRoute(r) {
+    if (r.startsWith('client/')) renderClient(r.slice(7));
+    else renderHome();
   }
 
   // ── LIGHTBOX ──────────────────────────────────────────────────────────────
@@ -219,7 +318,6 @@
       if (e.key === 'ArrowRight') navigate(1);
     });
 
-    // Touch swipe for mobile
     var touchStartX = 0;
     lb.el.addEventListener('touchstart', function (e) {
       touchStartX = e.touches[0].clientX;
@@ -266,25 +364,21 @@
   // ── ROUTER ────────────────────────────────────────────────────────────────
   function route() {
     var hash = location.hash.slice(1);
-    if (hash.startsWith('client/')) renderClient(hash.slice('client/'.length));
-    else renderHome();
-    window.scrollTo(0, 0);
+    renderByRoute(hash);
+    if (!IS_PREVIEW) window.scrollTo(0, 0);
   }
 
   function rerender() {
-    var hash = location.hash.slice(1);
-    if (hash.startsWith('client/')) renderClient(hash.slice('client/'.length));
-    else renderHome();
+    renderByRoute(location.hash.slice(1));
   }
 
-  // Re-render client page when crossing a breakpoint boundary
   var _lastBP = getBreakpoint();
   window.addEventListener('resize', function () {
     var bp = getBreakpoint();
     if (bp !== _lastBP) { _lastBP = bp; rerender(); }
   });
 
-  // ── Theme toggle ──────────────────────────────────────────────────────────
+  // ── Theme toggle (live site only) ─────────────────────────────────────────
   function themeIcon() {
     var dark = document.documentElement.getAttribute('data-theme') === 'dark';
     return dark
@@ -306,18 +400,51 @@
     });
   }
 
+  // ── postMessage handler (admin preview) ───────────────────────────────────
+  window.addEventListener('message', function (e) {
+    if (!e.data) return;
+    var msg = e.data;
+
+    if (msg.type === 'preview-update') {
+      CONFIG = msg.config;
+      applyDesignerStyles();
+      renderPageInfo();
+      renderByRoute(msg.route != null ? msg.route : '');
+      return;
+    }
+
+    if (msg.type === 'preview-select') {
+      document.querySelectorAll('.preview-selected').forEach(function (el) {
+        el.classList.remove('preview-selected');
+      });
+      var sel = msg.page === 'asset' ? '.asset-tile' : '.client-tile';
+      var els = document.querySelectorAll(sel);
+      if (els[msg.index]) els[msg.index].classList.add('preview-selected');
+      return;
+    }
+
+    if (msg.type === 'theme-change') {
+      document.documentElement.setAttribute('data-theme', msg.theme);
+      return;
+    }
+  });
+
   // ── INIT ──────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     app = document.getElementById('app');
-    initThemeToggle();
-    initLightbox();
+
+    if (!IS_PREVIEW) {
+      initThemeToggle();
+      initLightbox();
+      window.addEventListener('hashchange', route);
+    }
 
     fetch('/js/config.json?v=' + Date.now())
       .then(function (r) { return r.json(); })
       .then(function (config) {
         CONFIG = config;
+        applyDesignerStyles();
         renderPageInfo();
-        window.addEventListener('hashchange', route);
         route();
       })
       .catch(function () {

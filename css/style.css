@@ -94,20 +94,21 @@ main#app { flex: 1; }
 /* ─── Hero (home page) ──────────────────────────────────────── */
 .hero {
   text-align: center;
-  padding: 88px 2rem 64px;
+  padding: var(--hero-pt, 88px) 2rem var(--hero-pb, 64px);
 }
 
 .hero h1 {
-  font-size: clamp(2.8rem, 7vw, 5.5rem);
-  font-weight: 300;
+  font-size: var(--hero-title-size, clamp(2.8rem, 7vw, 5.5rem));
+  font-weight: var(--hero-title-weight, 300);
+  color: var(--hero-title-color, var(--text));
   letter-spacing: -0.025em;
   line-height: 1.08;
   margin-bottom: 0.75rem;
 }
 
 .hero p {
-  font-size: clamp(0.875rem, 1.4vw, 1.05rem);
-  color: var(--text-muted);
+  font-size: var(--hero-subtitle-size, clamp(0.875rem, 1.4vw, 1.05rem));
+  color: var(--hero-subtitle-color, var(--text-muted));
   font-weight: 300;
   letter-spacing: 0.05em;
 }
@@ -174,6 +175,7 @@ main#app { flex: 1; }
   cursor: pointer;
   padding: 2.5rem 2rem;
   overflow: hidden;
+  position: relative;
   transition: border-color 0.25s, box-shadow 0.28s, transform 0.28s;
 }
 
@@ -181,20 +183,6 @@ main#app { flex: 1; }
   border-color: #bbb;
   box-shadow: 0 8px 36px rgba(0,0,0,0.10);
   transform: translateY(-3px);
-}
-
-/* Logo — contained, not cropped */
-.bento-item.client-tile img {
-  width: auto;
-  height: auto;
-  max-width: 75%;
-  max-height: 160px;
-  object-fit: contain;
-  transition: transform 0.4s ease;
-}
-
-.bento-item.client-tile:hover img {
-  transform: scale(1.06);
 }
 
 .tile-info {
@@ -218,6 +206,27 @@ main#app { flex: 1; }
   font-size: 0.78rem;
   color: var(--text-muted);
   letter-spacing: 0.03em;
+}
+
+/* ── Logo tile image ─────────────────────────────────────────── */
+.bento-item.client-tile > img {
+  width: auto;
+  height: auto;
+  max-width: 75%;
+  max-height: 120px;   /* overridden per-tile by client.logoSize inline style */
+  object-fit: contain;
+  transition: transform 0.4s ease;
+}
+.bento-item.client-tile:hover > img { transform: scale(1.06); }
+
+/* ── Preview selection indicators ───────────────────────────── */
+.preview-selected {
+  outline: 2px solid #0070f3 !important;
+  outline-offset: -2px;
+}
+.drag-over-preview {
+  outline: 2px dashed #0070f3;
+  outline-offset: -2px;
 }
 
 /* ─── Client page header ────────────────────────────────────── */
@@ -251,8 +260,9 @@ main#app { flex: 1; }
 .back-btn:hover { color: var(--text); }
 
 .client-page-title {
-  font-size: clamp(1.4rem, 3vw, 2.2rem);
-  font-weight: 300;
+  font-size: var(--proj-title-size, clamp(1.4rem, 3vw, 2.2rem));
+  font-weight: var(--proj-title-weight, 300);
+  color: var(--proj-title-color, var(--text));
   letter-spacing: -0.015em;
 }
 

@@ -7,6 +7,13 @@
       "instagram": "https://lenka.co.il",
       "linkedin": "https://lenka.co.il",
       "behance": "https://lenka.co.il"
+    },
+    "styles": {
+      "heroTitleSize": 75,
+      "heroTitleWeight": 300,
+      "heroPaddingTop": 68,
+      "heroPaddingBottom": 64,
+      "heroSubtitleSize": 16
     }
   },
   "clients": [
@@ -15,6 +22,7 @@
       "name": "Animal Care",
       "category": "Social Media",
       "tileSize": "large",
+      "logoSize": 300,
       "grid": {
         "columns": 2,
         "gap": 26,
@@ -81,6 +89,7 @@
       "name": "Sawt",
       "category": "Branding",
       "tileSize": "large",
+      "logoSize": 120,
       "grid": {
         "columns": 2,
         "gap": 13,
@@ -120,6 +129,8 @@
       "name": "Test",
       "category": "Ads",
       "tileSize": "large",
+      "logoSize": 120,
+      "logo": "Assets/Test/logo.png",
       "grid": {
         "columns": 2,
         "gap": 20,
@@ -139,8 +150,7 @@
           "type": "gif",
           "cols": 1
         }
-      ],
-      "logo": "Assets/Test/logo.png"
+      ]
     }
   ]
 }
