@@ -53,6 +53,39 @@
     return config.clients.find(function (c) { return c.id === view; }) || null;
   }
 
+  function openModal(html, opts) {
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = '<div class="modal-content" role="dialog" aria-modal="true">' + html + '</div>';
+    document.body.appendChild(overlay);
+    var inp = overlay.querySelector('input');
+    if (inp) inp.focus();
+
+    function cleanup() {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+    }
+    function doCancel() { cleanup(); if (opts && opts.onCancel) opts.onCancel(); }
+    function doSubmit() { if (opts && opts.onSubmit) opts.onSubmit(overlay); }
+
+    function onKey(e) {
+      if (e.key === 'Escape') { doCancel(); }
+      if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); doSubmit(); }
+    }
+    document.addEventListener('keydown', onKey);
+
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) doCancel();
+    });
+    var cancelBtn = overlay.querySelector('.modal-cancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', doCancel);
+    var submitBtn = overlay.querySelector('.modal-submit');
+    if (submitBtn) submitBtn.addEventListener('click', doSubmit);
+
+    overlay._cleanup = cleanup;
+    return overlay;
+  }
+
   function defaultGrid() {
     return { columns: 3, gap: 10, width: 100, maxWidth: 0, paddingTop: 40, paddingBottom: 0, rowHeight: 0 };
   }
@@ -408,26 +441,51 @@
     if (newBtn) {
       newBtn.addEventListener('click', function (e) {
         e.stopPropagation();
-        var name = prompt('New project name:');
-        if (!name || !name.trim()) return;
-        var category = prompt('Category (e.g. Branding, Social Media):') || '';
-        fetch('/api/clients', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name.trim(), category: category.trim() }),
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.error) { alert(data.error); return; }
-          config.clients.push(data.client);
-          return fetch('/api/assets').then(function (r) { return r.json(); }).then(function (files) {
-            availableFiles = files;
-            view = data.id;
-            selectedIndex = -1;
-            renderAll();
-          });
-        })
-        .catch(function (ex) { alert('Error: ' + ex.message); });
+        openModal(
+          '<h2 class="modal-title">New Project</h2>' +
+          '<div class="modal-body">' +
+            '<div class="modal-field">' +
+              '<label class="modal-label" for="m-name">Project Name</label>' +
+              '<input class="ctrl-text modal-input" id="m-name" type="text" placeholder="e.g. Nike Campaign" autocomplete="off">' +
+              '<span class="modal-error" id="m-err" style="display:none"></span>' +
+            '</div>' +
+            '<div class="modal-field">' +
+              '<label class="modal-label" for="m-cat">Category <span class="modal-hint">(optional)</span></label>' +
+              '<input class="ctrl-text modal-input" id="m-cat" type="text" placeholder="Branding · Social Media · Motion · Print · UI/UX" autocomplete="off">' +
+            '</div>' +
+          '</div>' +
+          '<div class="modal-footer"><button class="modal-cancel">Cancel</button><button class="modal-submit">Create Project</button></div>',
+          {
+            onSubmit: function (ov) {
+              var name = ov.querySelector('#m-name').value.trim();
+              if (!name) {
+                var errEl = ov.querySelector('#m-err');
+                errEl.textContent = 'Project name is required.';
+                errEl.style.display = 'block';
+                return;
+              }
+              var category = ov.querySelector('#m-cat').value.trim();
+              ov._cleanup();
+              fetch('/api/clients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, category: category }),
+              })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                if (data.error) { alert(data.error); return; }
+                config.clients.push(data.client);
+                return fetch('/api/assets').then(function (r) { return r.json(); }).then(function (files) {
+                  availableFiles = files;
+                  view = data.id;
+                  selectedIndex = -1;
+                  renderAll();
+                });
+              })
+              .catch(function (ex) { alert('Error: ' + ex.message); });
+            }
+          }
+        );
       });
     }
   }
@@ -593,6 +651,7 @@
       html += '<details class="sidebar-section" data-key="selected-tile"' + sOpen('selected-tile') + '>';
       html += '<summary class="section-title">' + esc(c.name) + '</summary>';
       html += '<div class="section-body">';
+      html += '<button class="btn-open-project" id="btn-open-project" data-id="' + escAttr(c.id) + '">Open project →</button>';
       html += tileSizeSelector(c.tileSize || 'featured');
       html += '<div class="ctrl-row" style="margin-top:14px"><span class="ctrl-label">Logo size</span>';
       html += '<input type="range"  class="ctrl-slider" id="logo-size-slider" min="20" max="500" step="8" value="' + logoH + '">';
@@ -666,6 +725,15 @@
     bindStyleInputs();
 
     if (selectedIndex >= 0) {
+      var openBtn = document.getElementById('btn-open-project');
+      if (openBtn) {
+        openBtn.addEventListener('click', function () {
+          view = openBtn.dataset.id;
+          selectedIndex = -1;
+          renderAll();
+        });
+      }
+
       $sidebar.querySelectorAll('.size-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
           config.clients[selectedIndex].tileSize = btn.dataset.size;
@@ -870,17 +938,26 @@
     var deleteBtn = document.getElementById('btn-delete-client');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', function () {
-        if (!confirm('Remove "' + client.name + '" from portfolio? (Assets folder is kept)')) return;
-        var idx = config.clients.indexOf(client);
-        if (idx >= 0) config.clients.splice(idx, 1);
-        view = 'home'; selectedIndex = -1;
-        fetch('/api/config', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(config),
-        }).catch(function () {});
-        dirty = false;
-        renderAll();
+        openModal(
+          '<h2 class="modal-title">Delete Project?</h2>' +
+          '<p class="modal-body modal-body--text">Remove <strong>' + esc(client.name) + '</strong> from the portfolio? The assets folder is kept on disk.</p>' +
+          '<div class="modal-footer"><button class="modal-cancel">Cancel</button><button class="modal-submit modal-submit--danger">Delete Project</button></div>',
+          {
+            onSubmit: function (ov) {
+              ov._cleanup();
+              var idx = config.clients.indexOf(client);
+              if (idx >= 0) config.clients.splice(idx, 1);
+              view = 'home'; selectedIndex = -1;
+              fetch('/api/config', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config),
+              }).catch(function () {});
+              dirty = false;
+              renderAll();
+            }
+          }
+        );
       });
     }
 

@@ -164,6 +164,46 @@ body {
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
+#sidebar { scrollbar-width: thin; scrollbar-color: #d4d4d8 transparent; }
+#sidebar::-webkit-scrollbar { width: 6px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+#sidebar::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+.dark #sidebar { scrollbar-color: #3f3f46 transparent; }
+.dark #sidebar::-webkit-scrollbar-thumb { background: #3f3f46; }
+.dark #sidebar::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+/* ── Modal ───────────────────────────────────────────────────────────────── */
+.modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
+.modal-content { background: #fff; border-radius: 10px; padding: 24px; width: 340px; max-width: calc(100vw - 40px); box-shadow: 0 20px 60px rgba(0,0,0,0.18); }
+.dark .modal-content { background: #18181b; box-shadow: 0 20px 60px rgba(0,0,0,0.55); }
+.modal-title { font-size: 14px; font-weight: 600; margin: 0 0 16px; color: #18181b; }
+.dark .modal-title { color: #fafafa; }
+.modal-body { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.modal-body--text { font-size: 13px; line-height: 1.5; color: #52525b; margin: 0 0 20px; }
+.dark .modal-body--text { color: #a1a1aa; }
+.modal-field { display: flex; flex-direction: column; gap: 4px; }
+.modal-label { font-size: 11.5px; color: #71717a; font-weight: 500; }
+.modal-hint { font-size: 10.5px; color: #a1a1aa; font-weight: 400; }
+.modal-error { font-size: 11px; color: #ef4444; margin-top: 2px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+.modal-cancel { padding: 6px 14px; border: 1px solid #e4e4e7; border-radius: 6px; background: transparent; font-family: inherit; font-size: 12.5px; cursor: pointer; color: #18181b; }
+.dark .modal-cancel { border-color: #3f3f46; color: #d4d4d8; }
+.modal-cancel:hover { background: #f4f4f5; }
+.dark .modal-cancel:hover { background: #27272a; border-color: #52525b; }
+.modal-submit { padding: 6px 14px; border: none; border-radius: 6px; background: #18181b; color: #fff; font-family: inherit; font-size: 12.5px; cursor: pointer; }
+.dark .modal-submit { background: #fafafa; color: #18181b; }
+.modal-submit:hover { opacity: 0.85; }
+.modal-submit--danger { background: #dc2626 !important; color: #fff !important; }
+.modal-input { margin-top: 2px; }
+
+/* ── Open project button (home tile sidebar) ─────────────────────────────── */
+.btn-open-project { display: block; width: 100%; padding: 7px 12px; margin-bottom: 14px; border: 1px solid #e4e4e7; border-radius: 6px; font-size: 12px; font-family: inherit; color: #18181b; background: #f4f4f5; cursor: pointer; text-align: left; transition: background 0.12s, border-color 0.12s; }
+.dark .btn-open-project { background: #27272a; border-color: #3f3f46; color: #f4f4f5; }
+.btn-open-project:hover { background: #e4e4e7; border-color: #d4d4d8; }
+.dark .btn-open-project:hover { background: #3f3f46; border-color: #52525b; }
+
 /* ── Theme change transition ─────────────────────────────────────────────── */
 @keyframes theme-circle-in {
   from { clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 50%)); }

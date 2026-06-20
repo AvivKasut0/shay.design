@@ -101,12 +101,22 @@ When a key is `null`/absent, the CSS var is removed and the fallback applies (au
 - Only one tile style: logo + name + piece count (no tile style picker)
 - `client.tileSize` controls bento grid span: `normal | wide | large | featured | hero`
 - `client.logoSize` (px, default 120) applied as inline `style="max-height:Npx"` on the tile `<img>`
+- **Tablet centering**: `.bento-home` at ≤1024px uses 2 columns (not 3) so `large`/`featured`/`hero` tiles fill each row fully; prevents the empty-right-column artifact when tile spans don't divide evenly into 3
+
+### Admin modal system
+`openModal(html, opts)` in admin.js — replaces all native `prompt()` / `confirm()` / `alert()` dialogs:
+- Appends `.modal-overlay` + `.modal-content` to `document.body`
+- Opts: `{ onSubmit(overlay), onCancel() }` — caller controls modal lifecycle via `overlay._cleanup()`
+- Esc closes, Enter submits (unless focus is on a button), backdrop click cancels
+- Keydown listener is removed on close to prevent accumulation
+- Used for: new project creation (with inline validation), delete project confirmation (`.modal-submit--danger`)
 
 ### Dark mode
 - Inline `<head>` script reads `localStorage.theme` or `prefers-color-scheme` → sets `data-theme` on `<html>`
 - **Portfolio** (`style.css`): uses `[data-theme="dark"]` CSS selectors
 - **Admin** (`admin.css`): uses `.dark` class prefix selectors — the inline script also sets `classList.add('dark')` and the JS toggle keeps both `data-theme` and `.dark` in sync
 - Toggle button appended to nav (live site) and admin bar (admin) by JS; both use View Transition API circle-reveal animation (1s, falls back to instant)
+- **Scrollbars**: `style.css` themes the page scrollbar via `html` + `[data-theme="dark"]`; `admin.css` themes `#sidebar` via `.dark` prefix — 6px, thin, matches palette
 
 ---
 
