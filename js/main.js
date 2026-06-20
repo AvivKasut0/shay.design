@@ -235,11 +235,15 @@
     var grid = document.getElementById('asset-grid');
 
     if (IS_PREVIEW) {
-      // Click → select asset (no lightbox in preview)
+      // Click → select asset, or deselect on empty area (no lightbox in preview)
       grid.addEventListener('click', function (e) {
+        if (e.target.closest('.asset-ctrl-strip')) return;
         var tile = e.target.closest('.asset-tile');
-        if (!tile) return;
-        window.parent.postMessage({ type: 'asset-click', index: parseInt(tile.dataset.index, 10) }, '*');
+        if (tile) {
+          window.parent.postMessage({ type: 'asset-click', index: parseInt(tile.dataset.index, 10) }, '*');
+        } else {
+          window.parent.postMessage({ type: 'asset-deselect' }, '*');
+        }
       });
 
       // Back button → tell parent to show home
@@ -418,9 +422,55 @@
       document.querySelectorAll('.preview-selected').forEach(function (el) {
         el.classList.remove('preview-selected');
       });
-      var sel = msg.page === 'asset' ? '.asset-tile' : '.client-tile';
-      var els = document.querySelectorAll(sel);
-      if (els[msg.index]) els[msg.index].classList.add('preview-selected');
+      document.querySelectorAll('.asset-ctrl-strip').forEach(function (el) {
+        el.remove();
+      });
+      if (msg.page === 'asset' && msg.index >= 0) {
+        var assetEls = document.querySelectorAll('.asset-tile');
+        var selTile  = assetEls[msg.index];
+        if (selTile) {
+          selTile.classList.add('preview-selected');
+          var stripIdx  = msg.index;
+          var stripCols = msg.cols || 1;
+          var stripRows = msg.rows || 1;
+          var strip = document.createElement('div');
+          strip.className = 'asset-ctrl-strip';
+          strip.innerHTML =
+            '<span class="strip-ctrl">' +
+              '<button class="strip-btn" data-delta-col="-1">&#8592;</button>' +
+              '<span class="strip-count strip-col-count">' + stripCols + '</span>' +
+              '<span class="strip-label">col</span>' +
+              '<button class="strip-btn" data-delta-col="1">&#8594;</button>' +
+            '</span>' +
+            '<span class="strip-ctrl">' +
+              '<button class="strip-btn" data-delta-row="-1">&#8593;</button>' +
+              '<span class="strip-count strip-row-count">' + stripRows + '</span>' +
+              '<span class="strip-label">row</span>' +
+              '<button class="strip-btn" data-delta-row="1">&#8595;</button>' +
+            '</span>' +
+            '<button class="strip-btn strip-remove" title="Remove from grid">&#215;</button>';
+          strip.querySelectorAll('[data-delta-col]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              window.parent.postMessage({ type: 'asset-span-delta', index: stripIdx, colDelta: parseInt(btn.dataset.deltaCol, 10), rowDelta: 0 }, '*');
+            });
+          });
+          strip.querySelectorAll('[data-delta-row]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              window.parent.postMessage({ type: 'asset-span-delta', index: stripIdx, colDelta: 0, rowDelta: parseInt(btn.dataset.deltaRow, 10) }, '*');
+            });
+          });
+          strip.querySelector('.strip-remove').addEventListener('click', function (e) {
+            e.stopPropagation();
+            window.parent.postMessage({ type: 'asset-remove', index: stripIdx }, '*');
+          });
+          selTile.appendChild(strip);
+        }
+      } else if (msg.page === 'tile' && msg.index >= 0) {
+        var tileEls = document.querySelectorAll('.client-tile');
+        if (tileEls[msg.index]) tileEls[msg.index].classList.add('preview-selected');
+      }
       return;
     }
 
@@ -484,6 +534,10 @@
         var colSpan = msg.cols > 1 ? 'grid-column:span ' + Math.min(msg.cols, msg.totalCols) : '';
         var rowSpan = msg.rows > 1 ? 'grid-row:span '    + msg.rows                           : '';
         spanTile.style.cssText = [colSpan, rowSpan].filter(Boolean).join(';');
+        var colCount = spanTile.querySelector('.strip-col-count');
+        var rowCount = spanTile.querySelector('.strip-row-count');
+        if (colCount) colCount.textContent = msg.cols;
+        if (rowCount) rowCount.textContent = msg.rows;
       }
       return;
     }

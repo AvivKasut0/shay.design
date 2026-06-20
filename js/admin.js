@@ -11,14 +11,14 @@
   function themeIcon() {
     var dark = document.documentElement.getAttribute('data-theme') === 'dark';
     return dark
-      ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="19.07" y2="19.07"/><line x1="4.93" y1="19.07" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="19.07" y2="4.93"/></svg>'
-      : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+      ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>'
+      : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
   }
 
   var VP_ICONS = {
-    desktop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
-    tablet:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
-    mobile:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+    desktop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+    tablet:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M12 18h.01"/></svg>',
+    mobile:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg>',
   };
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@
   var $frame   = document.getElementById('preview-frame');
   var $toolbar = document.getElementById('preview-toolbar');
   var $save    = document.getElementById('btn-save');
-  var $viewBtn = document.querySelector('.btn-ghost[href="/"]');
+  var $viewBtn = document.getElementById('btn-view');
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function esc(s) {
@@ -76,7 +76,7 @@
   function markDirty() {
     dirty = true;
     $save.textContent = 'Save';
-    $save.classList.remove('saved');
+    $save.classList.remove('is-saved');
   }
 
   function setDeviceMode(active) {
@@ -146,7 +146,11 @@
     if (msg.type === 'asset-click' && view !== 'home') {
       selectedIndex = msg.index;
       renderSidebar();
-      sendMsg({ type: 'preview-select', page: 'asset', index: selectedIndex });
+      var clickedClient = currentClient();
+      var clickedAsset  = clickedClient && clickedClient.assets[selectedIndex];
+      sendMsg({ type: 'preview-select', page: 'asset', index: selectedIndex,
+                cols: clickedAsset ? (clickedAsset.cols || 1) : 1,
+                rows: clickedAsset ? (clickedAsset.rows || 1) : 1 });
       return;
     }
 
@@ -170,19 +174,53 @@
       renderAll();
       return;
     }
+
+    if (msg.type === 'asset-span-delta') {
+      var spanClient = currentClient();
+      if (!spanClient || msg.index < 0 || !spanClient.assets[msg.index]) return;
+      var spanAsset = spanClient.assets[msg.index];
+      var spanG     = resolvedG(spanClient);
+      var newCols   = Math.max(1, Math.min(spanG.columns, (spanAsset.cols || 1) + (msg.colDelta || 0)));
+      var newRows   = Math.max(1, Math.min(6,             (spanAsset.rows || 1) + (msg.rowDelta || 0)));
+      if (newCols === 1) delete spanAsset.cols; else spanAsset.cols = newCols;
+      if (newRows === 1) delete spanAsset.rows; else spanAsset.rows = newRows;
+      markDirty();
+      renderSidebar();
+      sendMsg({ type: 'asset-span-update', assetIndex: msg.index, cols: newCols, rows: newRows, totalCols: spanG.columns });
+      sendMsg({ type: 'preview-select', page: 'asset', index: msg.index, cols: newCols, rows: newRows });
+      return;
+    }
+
+    if (msg.type === 'asset-remove') {
+      var removeClient = currentClient();
+      if (!removeClient || msg.index < 0) return;
+      removeClient.assets.splice(msg.index, 1);
+      selectedIndex = -1;
+      markDirty();
+      renderAll();
+      return;
+    }
+
+    if (msg.type === 'asset-deselect') {
+      selectedIndex = -1;
+      renderSidebar();
+      sendMsg({ type: 'preview-select', page: 'asset', index: -1 });
+      return;
+    }
   });
 
   // ── Theme toggle ──────────────────────────────────────────────────────────
   (function () {
     var btn = document.createElement('button');
-    btn.className = 'btn btn-ghost';
-    btn.style.cssText = 'padding:5px 8px;display:inline-flex;align-items:center;';
+    btn.className = 'inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors';
     btn.setAttribute('aria-label', 'Toggle dark mode');
     btn.innerHTML = themeIcon();
-    document.querySelector('.admin-actions').prepend(btn);
+    document.getElementById('admin-actions').prepend(btn);
     btn.addEventListener('click', function () {
       var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
+      if (next === 'dark') document.documentElement.classList.add('dark');
+      else                 document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', next);
       btn.innerHTML = themeIcon();
       sendMsg({ type: 'theme-change', theme: next });
@@ -213,9 +251,9 @@
     .then(function () {
       dirty = false;
       $save.textContent = 'Saved ✓';
-      $save.classList.add('saved');
+      $save.classList.add('is-saved');
       setTimeout(function () {
-        if (!dirty) { $save.textContent = 'Save'; $save.classList.remove('saved'); }
+        if (!dirty) { $save.textContent = 'Save'; $save.classList.remove('is-saved'); }
       }, 2500);
     })
     .catch(function () { $save.textContent = 'Error — try again'; });
@@ -448,7 +486,7 @@
 
     html += '<div class="sidebar-section">';
     html += '<p class="section-title">Home Tiles</p>';
-    html += '<p style="font-size:11px;color:var(--muted);margin-bottom:0">Click a tile in the preview to select it.</p>';
+    html += '<p style="font-size:11px;color:#a1a1aa;margin-bottom:0">Click a tile in the preview to select it.</p>';
     html += '</div>';
 
     if (selectedIndex >= 0 && config.clients[selectedIndex]) {
@@ -470,14 +508,10 @@
 
   function tileSizeSelector(current) {
     var sizes = ['normal', 'wide', 'large', 'featured', 'hero'];
-    var html  = '<div class="ctrl-label" style="display:block;margin-bottom:6px">Tile size</div>';
+    var html  = '<div class="ctrl-label" style="display:block;margin-bottom:8px">Tile size</div>';
     html += '<div style="display:flex;flex-wrap:wrap;gap:5px">';
     sizes.forEach(function (s) {
-      var a = current === s;
-      html += '<button class="size-btn' + (a ? ' active' : '') + '" data-size="' + s
-        + '" style="padding:4px 10px;border:1px solid ' + (a ? '#111' : '#ddd')
-        + ';border-radius:3px;font-size:11px;background:' + (a ? '#111' : '#fff')
-        + ';color:' + (a ? '#fff' : '#555') + ';cursor:pointer">' + s + '</button>';
+      html += '<button class="size-btn' + (current === s ? ' active' : '') + '" data-size="' + s + '">' + s + '</button>';
     });
     html += '</div>';
     return html;
@@ -572,45 +606,38 @@
     var logoSrc = projectLogoSrc(client);
     var s       = config.designer.styles || {};
 
-    var html = '<div class="sidebar-section">';
-    html += '<p class="section-title">Project</p>';
-    html += '<div class="ctrl-row"><span class="ctrl-label">Name</span><input type="text" class="ctrl-text" id="edit-client-name" value="' + escAttr(client.name) + '"></div>';
-    html += '<div class="ctrl-row"><span class="ctrl-label">Category</span><input type="text" class="ctrl-text" id="edit-client-category" value="' + escAttr(client.category || '') + '"></div>';
-    html += '<div class="ctrl-label" style="display:block;margin-top:10px;margin-bottom:6px">Logo</div>';
-    html += logoFieldHTML(logoSrc, 'proj-logo-input', 'btn-remove-proj-logo');
-    html += '<button class="btn-remove" id="btn-delete-client" style="margin-top:12px">Delete Project</button>';
-    html += '</div>';
-
-    html += '<div class="sidebar-section">';
-    html += '<p class="section-title">Page Title</p>';
-    html += styleSliderRow('Size',   'projectTitleSize',   s.projectTitleSize   != null ? s.projectTitleSize   : 28, 12, 80, 1, 'px');
-    html += styleWeightRow('Weight', 'projectTitleWeight', s.projectTitleWeight != null ? s.projectTitleWeight : 300);
-    html += styleColorRow ('Color',  'projectTitleColor',  '#111111');
-    html += '</div>';
+    // Preserve advanced section open state across re-renders
+    var advancedOpen = ($sidebar.querySelector('.grid-advanced') || {}).open;
 
     var bpLabel = activeBP === 'desktop' ? '' : ' · ' + activeBP.charAt(0).toUpperCase() + activeBP.slice(1);
+    var html = '';
+
+    // 1 — Grid
     html += '<div class="sidebar-section">';
     html += '<p class="section-title">Grid<span style="text-transform:none;font-weight:400;letter-spacing:0;opacity:0.6">' + bpLabel + '</span></p>';
-    html += sliderRow('Columns',    'columns',       g.columns,        1, 8,   1,  '');
+    html += columnPickerRow(g.columns);
     html += sliderRow('Row height', 'rowHeight',     g.rowHeight || 0, 0, 800, 10, 'px');
     html += sliderRow('Gutter',     'gap',           g.gap,            0, 60,  1,  'px');
-    html += sliderRow('Width %',    'width',         g.width,          20,100, 1,  '%');
-    html += numRow   ('Max width',  'maxWidth',      g.maxWidth || 0,      'px');
-    html += sliderRow('Above',      'paddingTop',    g.paddingTop,     0, 200, 4,  'px');
-    html += sliderRow('Below',      'paddingBottom', g.paddingBottom,  0, 200, 4,  'px');
+    html += '<details class="grid-advanced"' + (advancedOpen ? ' open' : '') + '>';
+    html += '<summary>Advanced</summary>';
+    html += sliderRow('Width %',    'width',         g.width,          20, 100, 1,  '%');
+    html += numRow   ('Max width',  'maxWidth',      g.maxWidth || 0,       'px');
+    html += sliderRow('Above',      'paddingTop',    g.paddingTop,     0,  200, 4,  'px');
+    html += sliderRow('Below',      'paddingBottom', g.paddingBottom,  0,  200, 4,  'px');
+    html += '</details>';
     html += '</div>';
 
+    // 2 — Selected Image (thumbnail + remove only; col/row controls live on the tile strip)
     if (selectedIndex >= 0 && client.assets[selectedIndex]) {
       var asset = client.assets[selectedIndex];
       html += '<div class="sidebar-section">';
       html += '<p class="section-title">Selected Image</p>';
       html += '<img class="selected-thumb" src="' + escAttr(asset.file) + '" onerror="this.style.display=\'none\'">';
-      html += sliderRow('Col span', 'asset-cols', asset.cols || 1, 1, g.columns, 1, '');
-      html += sliderRow('Row span', 'asset-rows', asset.rows || 1, 1, 6,         1, '');
       html += '<button class="btn-remove" id="btn-remove">Remove from grid</button>';
       html += '</div>';
     }
 
+    // 3 — Add to Grid
     var folder    = clientFolder(client);
     var folderKey = folder ? folder.replace('Assets/', '') : client.name;
     var allFiles  = availableFiles[folderKey] || [];
@@ -629,6 +656,24 @@
       });
       html += '</div>';
     }
+    html += '</div>';
+
+    // 4 — Page Title
+    html += '<div class="sidebar-section">';
+    html += '<p class="section-title">Page Title</p>';
+    html += styleSliderRow('Size',   'projectTitleSize',   s.projectTitleSize   != null ? s.projectTitleSize   : 28, 12, 80, 1, 'px');
+    html += styleWeightRow('Weight', 'projectTitleWeight', s.projectTitleWeight != null ? s.projectTitleWeight : 300);
+    html += styleColorRow ('Color',  'projectTitleColor',  '#111111');
+    html += '</div>';
+
+    // 5 — Project (name/category/logo/delete — structural, rarely changed)
+    html += '<div class="sidebar-section">';
+    html += '<p class="section-title">Project</p>';
+    html += '<div class="ctrl-row"><span class="ctrl-label">Name</span><input type="text" class="ctrl-text" id="edit-client-name" value="' + escAttr(client.name) + '"></div>';
+    html += '<div class="ctrl-row"><span class="ctrl-label">Category</span><input type="text" class="ctrl-text" id="edit-client-category" value="' + escAttr(client.category || '') + '"></div>';
+    html += '<div class="ctrl-label" style="display:block;margin-top:10px;margin-bottom:6px">Logo</div>';
+    html += logoFieldHTML(logoSrc, 'proj-logo-input', 'btn-remove-proj-logo');
+    html += '<button class="btn-remove" id="btn-delete-client" style="margin-top:12px">Delete Project</button>';
     html += '</div>';
 
     $sidebar.innerHTML = html;
@@ -655,6 +700,22 @@
         (unit ? '<span class="ctrl-unit">' + unit + '</span>' : '') +
       '</div>'
     );
+  }
+
+  function columnPickerRow(currentCols) {
+    var html = '<div class="ctrl-row col-picker-row"><span class="ctrl-label">Columns</span><div class="col-picker">';
+    for (var n = 1; n <= 8; n++) {
+      var bars = '';
+      for (var b = 0; b < n; b++) {
+        var x = (b * 20 / n).toFixed(1);
+        var w = Math.max(1, 20 / n - 1.5).toFixed(1);
+        bars += '<rect x="' + x + '" y="0" width="' + w + '" height="12"/>';
+      }
+      var svg = '<svg width="20" height="12" viewBox="0 0 20 12" fill="currentColor">' + bars + '</svg>';
+      html += '<button class="col-picker-btn' + (currentCols === n ? ' active' : '') + '" data-cols="' + n + '" title="' + n + (n === 1 ? ' column' : ' columns') + '">' + svg + '<span class="col-picker-num">' + n + '</span></button>';
+    }
+    html += '</div></div>';
+    return html;
   }
 
   function bindProjectSidebarEvents(client, g) {
@@ -720,33 +781,27 @@
       });
     }
 
+    $sidebar.querySelectorAll('.col-picker-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var cols = parseInt(btn.dataset.cols, 10);
+        if (!client.grid) client.grid = {};
+        if (activeBP === 'desktop') {
+          client.grid.columns = cols;
+        } else {
+          if (!client.grid[activeBP]) client.grid[activeBP] = {};
+          client.grid[activeBP].columns = cols;
+        }
+        markDirty();
+        selectedIndex = -1;
+        renderProjectSidebar();
+        sendToPreview();
+      });
+    });
+
     $sidebar.querySelectorAll('input[type="range"][data-key], input[type="number"][data-key]').forEach(function (el) {
       el.addEventListener('input', function () {
         var key = el.dataset.key;
         var val = parseFloat(el.value);
-
-        if (key === 'asset-cols') {
-          if (selectedIndex >= 0 && client.assets[selectedIndex]) {
-            var cols = Math.max(1, Math.min(g.columns, Math.round(val)));
-            if (cols === 1) delete client.assets[selectedIndex].cols;
-            else            client.assets[selectedIndex].cols = cols;
-            markDirty();
-            $sidebar.querySelectorAll('[data-key="asset-cols"]').forEach(function (s) { s.value = cols; });
-            sendMsg({ type: 'asset-span-update', assetIndex: selectedIndex, cols: cols, rows: client.assets[selectedIndex].rows || 1, totalCols: g.columns });
-          }
-          return;
-        }
-        if (key === 'asset-rows') {
-          if (selectedIndex >= 0 && client.assets[selectedIndex]) {
-            var rows = Math.max(1, Math.round(val));
-            if (rows === 1) delete client.assets[selectedIndex].rows;
-            else            client.assets[selectedIndex].rows = rows;
-            markDirty();
-            $sidebar.querySelectorAll('[data-key="asset-rows"]').forEach(function (s) { s.value = rows; });
-            sendMsg({ type: 'asset-span-update', assetIndex: selectedIndex, cols: client.assets[selectedIndex].cols || 1, rows: rows, totalCols: g.columns });
-          }
-          return;
-        }
 
         if (!client.grid) client.grid = {};
         if (activeBP === 'desktop') {
@@ -758,16 +813,9 @@
         markDirty();
         $sidebar.querySelectorAll('[data-key="' + key + '"]').forEach(function (s) { s.value = val; });
 
-        if (key === 'columns') {
-          // Column count affects asset clamping — needs full re-render
-          selectedIndex = -1;
-          renderProjectSidebar();
-          sendToPreview();
-        } else {
-          // All other grid props: update only the grid element's style — no blink
-          var newG = resolvedG(client);
-          sendMsg({ type: 'grid-style-update', style: computeGridStyle(newG) });
-        }
+        // All grid props (except columns, now handled by picker): targeted update, no blink
+        var newG = resolvedG(client);
+        sendMsg({ type: 'grid-style-update', style: computeGridStyle(newG) });
       });
     });
 

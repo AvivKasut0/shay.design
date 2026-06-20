@@ -1,7 +1,7 @@
 {
   "designer": {
     "name": "Shay Design",
-    "tagline": "Graphic & Video Design · Ads & Social Media",
+    "tagline": "Graphic & Video Design",
     "email": "me@shay.design",
     "social": {
       "instagram": "https://lenka.co.il",
@@ -26,10 +26,10 @@
       "logoSize": 500,
       "grid": {
         "columns": 2,
-        "gap": 26,
+        "gap": 31,
         "width": 63,
         "maxWidth": null,
-        "paddingTop": 36,
+        "paddingTop": 0,
         "paddingBottom": 0,
         "rowHeight": 0,
         "tablet": {
@@ -43,13 +43,18 @@
       },
       "assets": [
         {
+          "file": "Assets/Animal Care/74109fd00e1046718913a7e0d4d2f326rw1200.png",
+          "type": "image"
+        },
+        {
           "file": "Assets/Animal Care/6813a46af76a482c91cea35faa71e007rw1200.png",
           "type": "image",
           "cols": 1
         },
         {
           "file": "Assets/Animal Care/c6058b49a7ef4906be82e27e0420b424rw1200.png",
-          "type": "image"
+          "type": "image",
+          "cols": 2
         },
         {
           "file": "Assets/Animal Care/685f10e758a2489aa12b4e933d209e22rw1200.png",
@@ -57,10 +62,6 @@
         },
         {
           "file": "Assets/Animal Care/867ba17c91fb4b75b2003a11cdfc7880rw1200.png",
-          "type": "image"
-        },
-        {
-          "file": "Assets/Animal Care/74109fd00e1046718913a7e0d4d2f326rw1200.png",
           "type": "image"
         },
         {
@@ -72,15 +73,15 @@
           "type": "image"
         },
         {
-          "file": "Assets/Animal Care/e42c192b4af44e41bf596a0603b95f1crw1200.png",
-          "type": "image"
-        },
-        {
           "file": "Assets/Animal Care/f0c65ef48c0646728ae00000ecd26f51rw1200.png",
           "type": "image"
         },
         {
           "file": "Assets/Animal Care/274fe1edf4b347f8973f488bbae41451rw1200.png",
+          "type": "image"
+        },
+        {
+          "file": "Assets/Animal Care/e42c192b4af44e41bf596a0603b95f1crw1200.png",
           "type": "image"
         }
       ]

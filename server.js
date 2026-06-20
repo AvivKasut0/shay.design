@@ -13,6 +13,14 @@ const PORT = process.env.PORT || 3000;
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 
+// ── Localhost-only guard ────────────────────────────────────────────────────
+function localOnly(req, res, next) {
+  const raw = (req.ip || req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+  if (raw === '127.0.0.1' || raw === '::1') return next();
+  res.status(403).send('403 — Admin access is restricted to localhost.');
+}
+app.use('/api', localOnly);
+
 // ── Static files (portfolio) ────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname), {
   index: 'index.html',
@@ -24,7 +32,7 @@ app.use(express.static(path.join(__dirname), {
 }));
 
 // ── Admin panel ─────────────────────────────────────────────────────────────
-app.get('/admin', (req, res) => {
+app.get('/admin', localOnly, (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 

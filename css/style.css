@@ -299,6 +299,54 @@ main#app { flex: 1; }
   transform: scale(1.04);
 }
 
+/* ─── Asset control strip (preview-mode overlay) ────────────── */
+.asset-ctrl-strip {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+.strip-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.strip-label {
+  color: rgba(255,255,255,0.55);
+  font-size: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.strip-count {
+  min-width: 16px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.strip-btn {
+  width: 22px; height: 22px;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 3px;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  transition: background 0.12s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.strip-btn:hover { background: rgba(255,255,255,0.28); }
+.strip-remove { border-color: rgba(255,90,90,0.5); }
+.strip-remove:hover { background: rgba(200,40,40,0.55); }
+
 /* ─── Page enter animation ──────────────────────────────────── */
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(10px); }
