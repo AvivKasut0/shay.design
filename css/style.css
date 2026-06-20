@@ -222,6 +222,13 @@ main#app { flex: 1; }
   letter-spacing: 0.03em;
 }
 
+.tile-caption {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
 /* ── Logo tile image ─────────────────────────────────────────── */
 .bento-item.client-tile > img {
   width: auto;

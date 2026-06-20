@@ -155,8 +155,14 @@
       var logo     = clientLogoPath(client);
       var logoDark = client.logoDark || null;
       var size     = client.tileSize || 'featured';
-      var count    = client.assets.length;
-      var countTxt = count + (count === 1 ? ' piece' : ' pieces');
+      var count      = client.assets.length;
+      var pieceLabel = client.pieceLabel != null ? client.pieceLabel : 'piece';
+      var countTxt   = '';
+      if (pieceLabel !== '') {
+        var piecePlural = pieceLabel.slice(-1) === 's' ? pieceLabel : pieceLabel + 's';
+        countTxt = count + ' ' + (count === 1 ? pieceLabel : piecePlural);
+      }
+      var captionTxt = client.tileCaption || '';
       var logoH    = client.logoSize || 120;
       var imgStyle = ' style="max-height:' + logoH + 'px"';
       var imgErr   = ' onerror="this.style.display=\'none\'"';
@@ -174,7 +180,8 @@
           logoHtml +
           '<div class="tile-info">' +
             '<span class="tile-name">' + esc(client.name) + '</span>' +
-            '<span class="tile-count">' + esc(countTxt) + '</span>' +
+            (countTxt ? '<span class="tile-count">' + esc(countTxt) + '</span>' : '') +
+            (captionTxt ? '<span class="tile-caption">' + esc(captionTxt) + '</span>' : '') +
           '</div>' +
         '</a>'
       );
