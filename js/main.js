@@ -153,17 +153,25 @@
 
     var tiles = CONFIG.clients.map(function (client) {
       var logo     = clientLogoPath(client);
+      var logoDark = client.logoDark || null;
       var size     = client.tileSize || 'featured';
       var count    = client.assets.length;
       var countTxt = count + (count === 1 ? ' piece' : ' pieces');
       var logoH    = client.logoSize || 120;
+      var imgStyle = ' style="max-height:' + logoH + 'px"';
+      var imgErr   = ' onerror="this.style.display=\'none\'"';
+      var logoHtml = '';
+      if (logo && logoDark) {
+        logoHtml =
+          '<img src="' + escAttr(logo) + '" alt="' + escAttr(client.name) + '" class="logo-light" loading="lazy"' + imgStyle + imgErr + '>' +
+          '<img src="' + escAttr(logoDark) + '" alt="' + escAttr(client.name) + '" class="logo-dark" loading="lazy"' + imgStyle + imgErr + '>';
+      } else if (logo) {
+        logoHtml = '<img src="' + escAttr(logo) + '" alt="' + escAttr(client.name) + '" loading="lazy"' + imgStyle + imgErr + '>';
+      }
 
       return (
         '<a href="#client/' + escAttr(client.id) + '" class="bento-item client-tile" data-size="' + size + '">' +
-          (logo
-            ? '<img src="' + escAttr(logo) + '" alt="' + escAttr(client.name) + '" loading="lazy"' +
-              ' style="max-height:' + logoH + 'px" onerror="this.style.display=\'none\'">'
-            : '') +
+          logoHtml +
           '<div class="tile-info">' +
             '<span class="tile-name">' + esc(client.name) + '</span>' +
             '<span class="tile-count">' + esc(countTxt) + '</span>' +
@@ -531,8 +539,9 @@
       var tiles = app ? app.querySelectorAll('.client-tile') : [];
       var logoTile = tiles[msg.clientIndex];
       if (logoTile) {
-        var logoImg = logoTile.querySelector(':scope > img');
-        if (logoImg) logoImg.style.maxHeight = msg.size + 'px';
+        logoTile.querySelectorAll(':scope > img').forEach(function (img) {
+          img.style.maxHeight = msg.size + 'px';
+        });
       }
       return;
     }

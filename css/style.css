@@ -75,6 +75,12 @@ main#app { flex: 1; }
   object-fit: contain;
 }
 
+/* Dark-mode tile logo switching */
+.logo-light { display: block; }
+.logo-dark  { display: none; }
+[data-theme="dark"] .logo-light { display: none; }
+[data-theme="dark"] .logo-dark  { display: block; }
+
 .nav-breadcrumb {
   font-size: 0.9rem;
   color: var(--text-muted);
@@ -564,7 +570,7 @@ main#app { flex: 1; }
 
 /* ─── Scrollbars ─────────────────────────────────────────────── */
 html { scrollbar-width: thin; scrollbar-color: #d4d4d8 transparent; }
-html::-webkit-scrollbar { width: 6px; }
+html::-webkit-scrollbar { width: 8px; }
 html::-webkit-scrollbar-track { background: transparent; }
 html::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
 html::-webkit-scrollbar-thumb:hover { background: #b4b4b4; }
