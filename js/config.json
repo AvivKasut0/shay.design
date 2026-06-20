@@ -31,8 +31,8 @@
         "paddingBottom": 0,
         "rowHeight": 0,
         "tablet": {
-          "columns": 2,
-          "rowHeight": 230
+          "columns": 1,
+          "rowHeight": 0
         },
         "mobile": {
           "columns": 1,
