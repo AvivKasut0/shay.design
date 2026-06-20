@@ -8,7 +8,7 @@ npm start           # starts server at http://localhost:3000
 - Admin:     http://localhost:3000/admin
 
 ## Stack
-- **Frontend**: Pure HTML/CSS/JS — no build tools, no frameworks
+- **Frontend**: Pure HTML/CSS/JS — no build tools, no frameworks, no Tailwind CDN
 - **Backend**: Node.js + Express (`server.js`)
 - **Config**: `js/config.json` — single source of truth, read/written by API
 - **Assets**: `Assets/<ProjectName>/` — excluded from git (on Dropbox)
@@ -16,14 +16,15 @@ npm start           # starts server at http://localhost:3000
 
 ## File map
 ```
-index.html      portfolio SPA (hash routing: #client/<id>)
-admin.html      admin panel SPA (iframe-based preview)
-server.js       Express backend + all API routes
-css/style.css   portfolio styles + dark mode + CSS custom property hooks
-css/admin.css   admin styles + dark mode
-js/main.js      portfolio renderer (router, lightbox, theme toggle, IS_PREVIEW mode)
-js/admin.js     admin panel (sidebar controls, iframe messaging, CRUD, drag-reorder)
-js/config.json  all content: designer info + styles + projects + assets
+index.html           portfolio SPA (hash routing: #client/<id>)
+admin.html           admin panel SPA (iframe-based preview) — pure CSS, no Tailwind CDN
+server.js            Express backend + all API routes
+css/style.css        portfolio styles + dark mode + CSS custom property hooks
+css/admin.css        admin styles + layout + dark mode (uses .dark class prefix)
+js/main.js           portfolio renderer (router, lightbox, theme toggle, IS_PREVIEW mode)
+js/admin.js          admin panel (sidebar controls, iframe messaging, CRUD, drag-reorder)
+js/config.json       all content: designer info + styles + projects + assets
+tests/grid.test.js   node tests/grid.test.js — pure logic tests for grid resolution
 ```
 
 ## Key architecture
@@ -89,10 +90,12 @@ When a key is `null`/absent, the CSS var is removed and the fallback applies (au
 ### Grid per-breakpoint
 - Base grid settings live on `client.grid` directly
 - Breakpoint overrides: `client.grid.tablet = {...}`, `client.grid.mobile = {...}`
-- `resolveGrid(rawGrid)` in main.js merges base + override for current viewport
+- `resolveGrid(rawGrid)` in main.js merges base + override; in IS_PREVIEW mode uses `_previewBP` (sent by admin), NOT `window.innerWidth` — this prevents mismatches when the preview panel is narrower than 1024px
 - `resolvedG(client)` in admin.js does the same using `activeBP` state
 - `align-items: stretch` + `grid-auto-rows: Npx` when `rowHeight > 0`
 - Asset `cols`/`rows` are clamped to `g.columns` on render
+- Switching device mode re-renders sidebar immediately so sliders/picker reflect the new BP values
+- Grid section header always shows `Grid · Desktop / Tablet / Mobile`
 
 ### Home tiles
 - Only one tile style: logo + name + piece count (no tile style picker)
@@ -101,8 +104,9 @@ When a key is `null`/absent, the CSS var is removed and the fallback applies (au
 
 ### Dark mode
 - Inline `<head>` script reads `localStorage.theme` or `prefers-color-scheme` → sets `data-theme` on `<html>`
-- CSS: `[data-theme="dark"] { --bg: ...; }` + component overrides in both style.css and admin.css
-- Toggle button appended to nav (live site) and admin bar (admin) by JS
+- **Portfolio** (`style.css`): uses `[data-theme="dark"]` CSS selectors
+- **Admin** (`admin.css`): uses `.dark` class prefix selectors — the inline script also sets `classList.add('dark')` and the JS toggle keeps both `data-theme` and `.dark` in sync
+- Toggle button appended to nav (live site) and admin bar (admin) by JS; both use View Transition API circle-reveal animation (1s, falls back to instant)
 
 ---
 
@@ -122,7 +126,7 @@ Detected via `var IS_PREVIEW = /[?&]preview=1/.test(location.search)`. When true
 
 | type | Payload | Effect in iframe |
 |---|---|---|
-| `preview-update` | `{config, route}` | Full re-render (structural changes only) |
+| `preview-update` | `{config, route, bp}` | Full re-render; sets `_previewBP` so grid resolution uses admin's active breakpoint |
 | `styles-update` | `{styles}` | Calls `applyStylesObj()` — CSS vars only, no re-render |
 | `hero-text-update` | `{name, tagline, logo}` | Updates `h1`, `p`, `document.title`, footer in place |
 | `project-text-update` | `{name, category}` | Updates page title span + breadcrumb |
@@ -147,10 +151,12 @@ Detected via `var IS_PREVIEW = /[?&]preview=1/.test(location.search)`. When true
 ### Viewport simulation
 `applyViewport()` in admin.js sets `$frame.style.maxWidth`:
 - Desktop → no maxWidth (fills available space)
-- Tablet → `768px` (triggers `getBreakpoint()='tablet'` inside iframe)
-- Mobile → `390px` (triggers `getBreakpoint()='mobile'` inside iframe)
+- Tablet → `768px`
+- Mobile → `390px`
 
-`.admin-preview.device-mode` class drives the surrounding grey color (theme-aware via CSS).
+The iframe's `resolveGrid()` does NOT use `window.innerWidth` in preview mode — it uses `_previewBP` from the `preview-update` message. This is critical: the preview panel is often <1024px wide (sidebar takes 272px), which would otherwise make desktop mode resolve as tablet.
+
+`#preview.device-mode` class drives the surrounding grey background (theme-aware via CSS).
 
 ---
 

@@ -1,8 +1,10 @@
 (function () {
   'use strict';
 
-  var IS_PREVIEW = /[?&]preview=1/.test(location.search);
-  var CONFIG = null;
+  var IS_PREVIEW    = /[?&]preview=1/.test(location.search);
+  var CONFIG        = null;
+  var _previewRoute = '';
+  var _previewBP    = 'desktop'; // breakpoint set by admin, used instead of window.innerWidth in preview
 
   // ── Social icon SVGs ─────────────────────────────────────────────────────
   var SOCIAL_ICONS = {
@@ -50,7 +52,9 @@
       paddingBottom: g.paddingBottom != null ? g.paddingBottom : 0,
       rowHeight:     g.rowHeight     != null ? g.rowHeight     : 0,
     };
-    var bp = getBreakpoint();
+    // In preview mode, use the breakpoint the admin has selected rather than the
+    // actual iframe window width (which can be narrower than 1024px even in "Desktop" mode).
+    var bp = IS_PREVIEW ? _previewBP : getBreakpoint();
     if (bp !== 'desktop' && g[bp]) return Object.assign({}, base, g[bp]);
     return base;
   }
@@ -380,7 +384,11 @@
   var _lastBP = getBreakpoint();
   window.addEventListener('resize', function () {
     var bp = getBreakpoint();
-    if (bp !== _lastBP) { _lastBP = bp; rerender(); }
+    if (bp !== _lastBP) {
+      _lastBP = bp;
+      if (IS_PREVIEW) renderByRoute(_previewRoute);
+      else rerender();
+    }
   });
 
   // ── Theme toggle (live site only) ─────────────────────────────────────────
@@ -399,9 +407,16 @@
     document.querySelector('.nav-inner').appendChild(btn);
     btn.addEventListener('click', function () {
       var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
-      btn.innerHTML = themeIcon();
+      var rect = btn.getBoundingClientRect();
+      document.documentElement.style.setProperty('--vt-x', Math.round(rect.left + rect.width  / 2) + 'px');
+      document.documentElement.style.setProperty('--vt-y', Math.round(rect.top  + rect.height / 2) + 'px');
+      function doSwitch() {
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        btn.innerHTML = themeIcon();
+      }
+      if (document.startViewTransition) document.startViewTransition(doSwitch);
+      else doSwitch();
     });
   }
 
@@ -412,9 +427,11 @@
 
     if (msg.type === 'preview-update') {
       CONFIG = msg.config;
+      _previewRoute = msg.route != null ? msg.route : '';
+      _previewBP    = msg.bp    != null ? msg.bp    : 'desktop';
       applyDesignerStyles();
       renderPageInfo();
-      renderByRoute(msg.route != null ? msg.route : '');
+      renderByRoute(_previewRoute);
       return;
     }
 

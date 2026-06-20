@@ -28,6 +28,9 @@
   var selectedIndex  = -1;
   var dirty          = false;
   var activeBP       = 'desktop';
+  var history        = [];
+  var historyIndex   = -1;
+  var historyTimer   = null;
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
   var $tabs    = document.getElementById('admin-tabs');
@@ -77,6 +80,54 @@
     dirty = true;
     $save.textContent = 'Save';
     $save.classList.remove('is-saved');
+    debouncedPush();
+  }
+
+  function pushHistory() {
+    clearTimeout(historyTimer); historyTimer = null;
+    history = history.slice(0, historyIndex + 1);
+    history.push(JSON.parse(JSON.stringify(config)));
+    if (history.length > 60) history.splice(0, history.length - 60);
+    historyIndex = history.length - 1;
+    updateUndoRedoButtons();
+  }
+
+  function debouncedPush() {
+    clearTimeout(historyTimer);
+    historyTimer = setTimeout(pushHistory, 500);
+  }
+
+  function applyHistoryState() {
+    config = JSON.parse(JSON.stringify(history[historyIndex]));
+    if (view !== 'home' && !config.clients.find(function (c) { return c.id === view; })) {
+      view = 'home'; selectedIndex = -1;
+    }
+    dirty = true;
+    $save.textContent = 'Save';
+    $save.classList.remove('is-saved');
+    renderAll();
+    updateUndoRedoButtons();
+  }
+
+  function undo() {
+    clearTimeout(historyTimer); historyTimer = null;
+    if (historyIndex <= 0) return;
+    historyIndex--;
+    applyHistoryState();
+  }
+
+  function redo() {
+    clearTimeout(historyTimer); historyTimer = null;
+    if (historyIndex >= history.length - 1) return;
+    historyIndex++;
+    applyHistoryState();
+  }
+
+  function updateUndoRedoButtons() {
+    var u = document.getElementById('btn-undo');
+    var r = document.getElementById('btn-redo');
+    if (u) u.disabled = historyIndex <= 0;
+    if (r) r.disabled = historyIndex >= history.length - 1;
   }
 
   function setDeviceMode(active) {
@@ -115,6 +166,7 @@
       type:   'preview-update',
       config: config,
       route:  view === 'home' ? '' : 'client/' + view,
+      bp:     activeBP,
     });
   }
 
@@ -212,19 +264,53 @@
   // ── Theme toggle ──────────────────────────────────────────────────────────
   (function () {
     var btn = document.createElement('button');
-    btn.className = 'inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors';
+    btn.className = 'icon-btn';
     btn.setAttribute('aria-label', 'Toggle dark mode');
     btn.innerHTML = themeIcon();
     document.getElementById('admin-actions').prepend(btn);
     btn.addEventListener('click', function () {
       var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      if (next === 'dark') document.documentElement.classList.add('dark');
-      else                 document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', next);
-      btn.innerHTML = themeIcon();
-      sendMsg({ type: 'theme-change', theme: next });
+      var rect = btn.getBoundingClientRect();
+      document.documentElement.style.setProperty('--vt-x', Math.round(rect.left + rect.width  / 2) + 'px');
+      document.documentElement.style.setProperty('--vt-y', Math.round(rect.top  + rect.height / 2) + 'px');
+      function doSwitch() {
+        document.documentElement.setAttribute('data-theme', next);
+        if (next === 'dark') document.documentElement.classList.add('dark');
+        else                 document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', next);
+        btn.innerHTML = themeIcon();
+        sendMsg({ type: 'theme-change', theme: next });
+      }
+      if (document.startViewTransition) document.startViewTransition(doSwitch);
+      else doSwitch();
     });
+  })();
+
+  // ── Undo / Redo buttons ────────────────────────────────────────────────────
+  (function () {
+    var UNDO_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
+    var REDO_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>';
+    var actions = document.getElementById('admin-actions');
+
+    var redoBtn = document.createElement('button');
+    redoBtn.id = 'btn-redo';
+    redoBtn.className = 'icon-btn';
+    redoBtn.title = 'Redo (Ctrl+Y)';
+    redoBtn.setAttribute('aria-label', 'Redo');
+    redoBtn.innerHTML = REDO_ICON;
+    redoBtn.disabled = true;
+    redoBtn.addEventListener('click', redo);
+    actions.insertBefore(redoBtn, $viewBtn);
+
+    var undoBtn = document.createElement('button');
+    undoBtn.id = 'btn-undo';
+    undoBtn.className = 'icon-btn';
+    undoBtn.title = 'Undo (Ctrl+Z)';
+    undoBtn.setAttribute('aria-label', 'Undo');
+    undoBtn.innerHTML = UNDO_ICON;
+    undoBtn.disabled = true;
+    undoBtn.addEventListener('click', undo);
+    actions.insertBefore(undoBtn, redoBtn);
   })();
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -234,6 +320,7 @@
   ]).then(function (results) {
     config         = results[0];
     availableFiles = results[1];
+    pushHistory();
     renderAll();
   }).catch(function () {
     document.getElementById('preview-body').innerHTML = '<p style="padding:2rem;color:#888">Could not load config.</p>';
@@ -261,6 +348,8 @@
 
   document.addEventListener('keydown', function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); $save.click(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
   });
 
   // ── Render all (structural change) ───────────────────────────────────────
@@ -291,8 +380,8 @@
       btn.addEventListener('click', function () {
         activeBP = btn.dataset.bp;
         renderToolbar();
+        renderSidebar();
         applyViewport();
-        // Grid display depends on breakpoint — full update needed
         if (view !== 'home') sendToPreview();
       });
     });
@@ -463,18 +552,26 @@
   // ── Home sidebar ──────────────────────────────────────────────────────────
   function renderHomeSidebar() {
     var s = config.designer.styles || {};
+
+    // Preserve collapse states across re-renders
+    var ss = {};
+    $sidebar.querySelectorAll('details[data-key]').forEach(function (d) { ss[d.dataset.key] = d.open; });
+    function sOpen(key, def) { return (ss[key] !== undefined ? ss[key] : (def !== false)) ? ' open' : ''; }
+
     var html = '';
 
-    html += '<div class="sidebar-section">';
-    html += '<p class="section-title">General</p>';
+    html += '<details class="sidebar-section" data-key="general"' + sOpen('general') + '>';
+    html += '<summary class="section-title">General</summary>';
+    html += '<div class="section-body">';
     html += '<div class="ctrl-row"><span class="ctrl-label">Title</span><input type="text" class="ctrl-text" id="edit-site-title" value="' + escAttr(config.designer.name) + '"></div>';
     html += '<div class="ctrl-row"><span class="ctrl-label">Tagline</span><input type="text" class="ctrl-text" id="edit-site-tagline" value="' + escAttr(config.designer.tagline || '') + '"></div>';
     html += '<div class="ctrl-label" style="display:block;margin-top:10px;margin-bottom:6px">Site Logo</div>';
     html += logoFieldHTML(config.designer.logo, 'site-logo-input', 'btn-remove-site-logo');
-    html += '</div>';
+    html += '</div></details>';
 
-    html += '<div class="sidebar-section">';
-    html += '<p class="section-title">Hero</p>';
+    html += '<details class="sidebar-section" data-key="hero"' + sOpen('hero') + '>';
+    html += '<summary class="section-title">Hero</summary>';
+    html += '<div class="section-body">';
     html += styleSliderRow('Title size',  'heroTitleSize',     s.heroTitleSize     != null ? s.heroTitleSize     : 52, 12, 120, 1, 'px');
     html += styleWeightRow('Title weight','heroTitleWeight',   s.heroTitleWeight   != null ? s.heroTitleWeight   : 300);
     html += styleColorRow ('Title color', 'heroTitleColor',    '#111111');
@@ -482,24 +579,26 @@
     html += styleColorRow ('Sub color',   'heroSubtitleColor', '#888888');
     html += styleSliderRow('Pad top',     'heroPaddingTop',    s.heroPaddingTop    != null ? s.heroPaddingTop    : 88, 0, 200, 4, 'px');
     html += styleSliderRow('Pad bottom',  'heroPaddingBottom', s.heroPaddingBottom != null ? s.heroPaddingBottom : 64, 0, 200, 4, 'px');
-    html += '</div>';
+    html += '</div></details>';
 
-    html += '<div class="sidebar-section">';
-    html += '<p class="section-title">Home Tiles</p>';
+    html += '<details class="sidebar-section" data-key="home-tiles"' + sOpen('home-tiles') + '>';
+    html += '<summary class="section-title">Home Tiles</summary>';
+    html += '<div class="section-body">';
     html += '<p style="font-size:11px;color:#a1a1aa;margin-bottom:0">Click a tile in the preview to select it.</p>';
-    html += '</div>';
+    html += '</div></details>';
 
     if (selectedIndex >= 0 && config.clients[selectedIndex]) {
       var c = config.clients[selectedIndex];
       var logoH = c.logoSize || 120;
-      html += '<div class="sidebar-section">';
-      html += '<p class="section-title">' + esc(c.name) + '</p>';
+      html += '<details class="sidebar-section" data-key="selected-tile"' + sOpen('selected-tile') + '>';
+      html += '<summary class="section-title">' + esc(c.name) + '</summary>';
+      html += '<div class="section-body">';
       html += tileSizeSelector(c.tileSize || 'featured');
       html += '<div class="ctrl-row" style="margin-top:14px"><span class="ctrl-label">Logo size</span>';
       html += '<input type="range"  class="ctrl-slider" id="logo-size-slider" min="20" max="500" step="8" value="' + logoH + '">';
       html += '<input type="number" class="ctrl-num"    id="logo-size-num"    min="20" max="500"          value="' + logoH + '">';
       html += '<span class="ctrl-unit">px</span></div>';
-      html += '</div>';
+      html += '</div></details>';
     }
 
     $sidebar.innerHTML = html;
@@ -606,35 +705,36 @@
     var logoSrc = projectLogoSrc(client);
     var s       = config.designer.styles || {};
 
-    // Preserve advanced section open state across re-renders
-    var advancedOpen = ($sidebar.querySelector('.grid-advanced') || {}).open;
+    // Preserve collapse states across re-renders (sections + inner advanced toggle)
+    var ss = {};
+    $sidebar.querySelectorAll('details[data-key]').forEach(function (d) { ss[d.dataset.key] = d.open; });
+    function sOpen(key, def) { return (ss[key] !== undefined ? ss[key] : (def !== false)) ? ' open' : ''; }
 
-    var bpLabel = activeBP === 'desktop' ? '' : ' · ' + activeBP.charAt(0).toUpperCase() + activeBP.slice(1);
+    var bpLabel = ' · ' + activeBP.charAt(0).toUpperCase() + activeBP.slice(1);
     var html = '';
 
     // 1 — Grid
-    html += '<div class="sidebar-section">';
-    html += '<p class="section-title">Grid<span style="text-transform:none;font-weight:400;letter-spacing:0;opacity:0.6">' + bpLabel + '</span></p>';
+    html += '<details class="sidebar-section" data-key="grid"' + sOpen('grid') + '>';
+    html += '<summary class="section-title">Grid<span style="text-transform:none;font-weight:400;letter-spacing:0;opacity:0.6">' + bpLabel + '</span></summary>';
+    html += '<div class="section-body">';
     html += columnPickerRow(g.columns);
     html += sliderRow('Row height', 'rowHeight',     g.rowHeight || 0, 0, 800, 10, 'px');
     html += sliderRow('Gutter',     'gap',           g.gap,            0, 60,  1,  'px');
-    html += '<details class="grid-advanced"' + (advancedOpen ? ' open' : '') + '>';
-    html += '<summary>Advanced</summary>';
     html += sliderRow('Width %',    'width',         g.width,          20, 100, 1,  '%');
     html += numRow   ('Max width',  'maxWidth',      g.maxWidth || 0,       'px');
     html += sliderRow('Above',      'paddingTop',    g.paddingTop,     0,  200, 4,  'px');
     html += sliderRow('Below',      'paddingBottom', g.paddingBottom,  0,  200, 4,  'px');
-    html += '</details>';
-    html += '</div>';
+    html += '</div></details>';
 
     // 2 — Selected Image (thumbnail + remove only; col/row controls live on the tile strip)
     if (selectedIndex >= 0 && client.assets[selectedIndex]) {
       var asset = client.assets[selectedIndex];
-      html += '<div class="sidebar-section">';
-      html += '<p class="section-title">Selected Image</p>';
+      html += '<details class="sidebar-section" data-key="selected-img"' + sOpen('selected-img') + '>';
+      html += '<summary class="section-title">Selected Image</summary>';
+      html += '<div class="section-body">';
       html += '<img class="selected-thumb" src="' + escAttr(asset.file) + '" onerror="this.style.display=\'none\'">';
       html += '<button class="btn-remove" id="btn-remove">Remove from grid</button>';
-      html += '</div>';
+      html += '</div></details>';
     }
 
     // 3 — Add to Grid
@@ -644,8 +744,9 @@
     var usedFiles = client.assets.map(function (a) { return a.file; });
     var unused    = allFiles.filter(function (f) { return usedFiles.indexOf(f) === -1; });
 
-    html += '<div class="sidebar-section">';
-    html += '<p class="section-title">Add to Grid</p>';
+    html += '<details class="sidebar-section" data-key="add-grid"' + sOpen('add-grid') + '>';
+    html += '<summary class="section-title">Add to Grid</summary>';
+    html += '<div class="section-body">';
     html += '<label class="btn-upload-label"><input type="file" id="upload-input" multiple accept="image/*,video/*,.gif,.webp,.webm,.mp4,.mov" style="display:none"><span id="upload-label-text">↑ Upload Files</span></label>';
     if (unused.length === 0) {
       html += '<p class="avail-empty">All files in this folder are in the grid.</p>';
@@ -656,25 +757,27 @@
       });
       html += '</div>';
     }
-    html += '</div>';
+    html += '</div></details>';
 
     // 4 — Page Title
-    html += '<div class="sidebar-section">';
-    html += '<p class="section-title">Page Title</p>';
+    html += '<details class="sidebar-section" data-key="page-title"' + sOpen('page-title') + '>';
+    html += '<summary class="section-title">Page Title</summary>';
+    html += '<div class="section-body">';
     html += styleSliderRow('Size',   'projectTitleSize',   s.projectTitleSize   != null ? s.projectTitleSize   : 28, 12, 80, 1, 'px');
     html += styleWeightRow('Weight', 'projectTitleWeight', s.projectTitleWeight != null ? s.projectTitleWeight : 300);
     html += styleColorRow ('Color',  'projectTitleColor',  '#111111');
-    html += '</div>';
+    html += '</div></details>';
 
-    // 5 — Project (name/category/logo/delete — structural, rarely changed)
-    html += '<div class="sidebar-section">';
-    html += '<p class="section-title">Project</p>';
+    // 5 — Project (name/category/logo/delete — structural, rarely changed, collapsed by default)
+    html += '<details class="sidebar-section" data-key="project"' + sOpen('project', false) + '>';
+    html += '<summary class="section-title">Project</summary>';
+    html += '<div class="section-body">';
     html += '<div class="ctrl-row"><span class="ctrl-label">Name</span><input type="text" class="ctrl-text" id="edit-client-name" value="' + escAttr(client.name) + '"></div>';
     html += '<div class="ctrl-row"><span class="ctrl-label">Category</span><input type="text" class="ctrl-text" id="edit-client-category" value="' + escAttr(client.category || '') + '"></div>';
     html += '<div class="ctrl-label" style="display:block;margin-top:10px;margin-bottom:6px">Logo</div>';
     html += logoFieldHTML(logoSrc, 'proj-logo-input', 'btn-remove-proj-logo');
     html += '<button class="btn-remove" id="btn-delete-client" style="margin-top:12px">Delete Project</button>';
-    html += '</div>';
+    html += '</div></details>';
 
     $sidebar.innerHTML = html;
     bindStyleInputs();

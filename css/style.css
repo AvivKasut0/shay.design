@@ -1,3 +1,11 @@
+/* ─── Theme change transition ────────────────────────────────── */
+@keyframes theme-circle-in {
+  from { clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 50%)); }
+  to   { clip-path: circle(200vmax at var(--vt-x, 50%) var(--vt-y, 50%)); }
+}
+::view-transition-old(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) { animation: theme-circle-in 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
 /* ─── Reset & Base ──────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
