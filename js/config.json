@@ -4,17 +4,15 @@
     "tagline": "Graphic & Video Design",
     "email": "me@shay.design",
     "social": {
-      "instagram": "https://lenka.co.il",
-      "linkedin": "https://lenka.co.il",
-      "behance": "https://lenka.co.il"
+      "instagram": "https://www.instagram.com/shay_oh/"
     },
     "styles": {
-      "heroTitleSize": 72,
+      "heroTitleSize": 65,
       "heroTitleWeight": 300,
       "heroPaddingTop": 68,
       "heroPaddingBottom": 64,
       "heroSubtitleSize": 16,
-      "projectTitleSize": 40
+      "projectTitleSize": 45
     }
   },
   "clients": [
@@ -25,9 +23,9 @@
       "tileSize": "large",
       "logoSize": 500,
       "grid": {
-        "columns": 2,
+        "columns": 3,
         "gap": 31,
-        "width": 63,
+        "width": 80,
         "maxWidth": null,
         "paddingTop": 0,
         "paddingBottom": 0,
@@ -47,14 +45,15 @@
           "type": "image"
         },
         {
+          "file": "Assets/Animal Care/c6058b49a7ef4906be82e27e0420b424rw1200.png",
+          "type": "image",
+          "cols": 2,
+          "rows": 2
+        },
+        {
           "file": "Assets/Animal Care/6813a46af76a482c91cea35faa71e007rw1200.png",
           "type": "image",
           "cols": 1
-        },
-        {
-          "file": "Assets/Animal Care/c6058b49a7ef4906be82e27e0420b424rw1200.png",
-          "type": "image",
-          "cols": 2
         },
         {
           "file": "Assets/Animal Care/685f10e758a2489aa12b4e933d209e22rw1200.png",
@@ -93,22 +92,26 @@
       "tileSize": "large",
       "logoSize": 324,
       "grid": {
-        "columns": 4,
+        "columns": 3,
         "gap": 13,
         "width": 71,
         "maxWidth": 0,
-        "paddingTop": 28,
+        "paddingTop": 8,
         "paddingBottom": 12,
         "mobile": {
           "columns": 1,
           "gap": 14,
           "width": 70
-        }
+        },
+        "tablet": {
+          "columns": 3
+        },
+        "rowHeight": 0
       },
       "assets": [
         {
-          "file": "Assets/Sawt/d45fc2ee409f4d0996554d5b2537b474rw1200.gif",
-          "type": "gif"
+          "file": "Assets/Sawt/Vy7V4D3DX4poster.jpg",
+          "type": "image"
         },
         {
           "file": "Assets/Sawt/ee35099299f745afb6e0fca33be91a30rw1200.gif",
@@ -117,11 +120,11 @@
           "rows": 2
         },
         {
-          "file": "Assets/Sawt/UAe6v6pFgbposter.jpg",
-          "type": "image"
+          "file": "Assets/Sawt/d45fc2ee409f4d0996554d5b2537b474rw1200.gif",
+          "type": "gif"
         },
         {
-          "file": "Assets/Sawt/Vy7V4D3DX4poster.jpg",
+          "file": "Assets/Sawt/UAe6v6pFgbposter.jpg",
           "type": "image"
         }
       ]
