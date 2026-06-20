@@ -1,3 +1,13 @@
 node_modules/
 .env
 /tmp
+
+# Local-only — not needed for static GitHub Pages deployment
+admin.html
+js/admin.js
+css/admin.css
+server.js
+CLAUDE.md
+package.json
+package-lock.json
+tests/
