@@ -576,7 +576,7 @@
       window.addEventListener('hashchange', route);
     }
 
-    fetch('/js/config.json?v=' + Date.now())
+    fetch('js/config.json?v=' + Date.now())
       .then(function (r) { return r.json(); })
       .then(function (config) {
         CONFIG = config;
