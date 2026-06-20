@@ -156,6 +156,29 @@
           "cols": 1
         }
       ]
+    },
+    {
+      "id": "moshe",
+      "name": "Moshe",
+      "category": "",
+      "tileSize": "large",
+      "grid": {
+        "columns": 3,
+        "gap": 20,
+        "width": 80,
+        "maxWidth": 0,
+        "paddingTop": 40,
+        "paddingBottom": 0,
+        "rowHeight": 0
+      },
+      "assets": [
+        {
+          "file": "Assets/Moshe/1D4F885A6A0E5BAC8DE43EC98EB14592_video_dashinit.mp4",
+          "type": "video"
+        }
+      ],
+      "logo": "Assets/Moshe/logo.gif",
+      "logoSize": 108
     }
   ]
 }
